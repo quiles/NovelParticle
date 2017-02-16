@@ -1088,9 +1088,9 @@ void TParticleNet::SaveParticlePosition(const char *filename){
     PParticle data;
 
     file.open(filename, ofstream::out);
-    file << "% Particle's file -> a snapshot of the particle space\n";
-    file << "% Simulation Parameters -> alpha: " << alpha << " beta: " << beta << endl;
-    file << "% x, y, z, ground truth community id, assigned community id, node_id\n";
+    file << "# Particle's file -> a snapshot of the particle space\n";
+    file << "# Simulation Parameters -> alpha: " << alpha << " beta: " << beta << endl;
+    file << "# x, y, z, ground truth community id, assigned community id, node_id\n";
 
     for (NI=BegNI() ; NI<EndNI(); NI++){
         data = GetNDat(NI.GetId());
@@ -1098,15 +1098,17 @@ void TParticleNet::SaveParticlePosition(const char *filename){
         if (data->index)
             file << fixed << setprecision(2) <<
                     data->x << "\t" << data->y << "\t" << data->z << "\t" <<
-                    data->indexReal << "\t" <<
-                    "-1" << "\t" <<
-                    NI.GetId() << endl;
+//                    data->indexReal << "\t" <<
+//                    "-1" << "\t" <<
+//                    NI.GetId() << 
+                    endl;
         else
             file << fixed << setprecision(2) <<
                     data->x << "\t" << data->y << "\t" << data->z << "\t" <<
-                    data->indexReal << "\t" <<
-                    "-1" << "\t" <<
-                    NI.GetId() << endl;
+//                    data->indexReal << "\t" <<
+//                    "-1" << "\t" <<
+//                    NI.GetId() << 
+                    endl;
     }
     file.close();
 }
