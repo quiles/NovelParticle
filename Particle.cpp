@@ -92,11 +92,13 @@ void Message(int i){
  */
 
 void ModelByStep(){
+//    char commandsForGnuplot[1024] = {"set title \"Particles\""};
     PParticleNet Model;
     string saveName;
     char out[256];
     int i;
     clock_t ini,end;
+//    FILE * gnuplotPipe = popen ("gnuplot -persistent", "w");
     
     ini = clock();
     
@@ -122,6 +124,7 @@ void ModelByStep(){
     Model->SetModelParameters(alpha, beta, 1.0);
     cout << "Model running...\n";
     for (i=1 ; i<steps ; i++){
+<<<<<<< HEAD
         Model->RunByStep2();
         if (i%10==0) {
             sprintf(out,"time_%d.par",i);
@@ -131,6 +134,17 @@ void ModelByStep(){
             Model->SaveParticlePosition(saveName.c_str());
         }
     }
+=======
+       Model->RunByStep();
+       sprintf(out,"time_%d.par",i);
+       saveName = fName;
+       saveName.replace(fName.size()-3,3,out);
+       cout << "Step: " << i << " - " << saveName.c_str() << endl;
+       Model->SaveParticlePosition(saveName.c_str());
+ //      sprintf(commandsForGnuplot,"splot \"%s\"",saveName.c_str());
+ //      fprintf(gnuplotPipe, "%s \n", commandsForGnuplot); //Send commands to gnuplot one by one.
+    }   
+>>>>>>> f1ca97b1eb6a56c91a5413fb2cbb786631e115c6
     cout << "Detecting clusters...\n";
     Model->CommunityDetection3();
     end = clock();
@@ -244,6 +258,48 @@ int main(int argc,char *argv[]){
         //        if (saveStates) ModelStep(fName,fNameCom,alpha,beta, steps);
         //        else Model0(fName,fNameCom,alpha,beta);
     }
+<<<<<<< HEAD
     
+=======
+
+
+/*
+	TIntH expCount, PoissonCount;
+	TRnd a;
+	double binSize=0.1;
+	//exponential distribution	
+	for (int i=0; i<10000; ++i)
+	{
+		double num=a.GetExpDev(1);
+		expCount.AddDat((int)(num/binSize))++;
+	}
+
+	//Poisson distribution	
+	for (int i=0; i<10000; ++i)
+	{
+		double num=a.GetPoissonDev(10);
+		PoissonCount.AddDat((int)(num/binSize))++;
+	}
+
+
+	expCount.Sort(true,true);
+	PoissonCount.Sort(true,true);
+
+	{
+		TVec<TPair<TFlt, TFlt > > XY1, XY2;
+		for (int i=0; i<expCount.Len(); ++i)
+			XY1.Add(TFltPr(expCount.GetKey(i)*binSize, expCount[i]+0.0));
+		for (int i=0; i<PoissonCount.Len(); ++i)
+			XY2.Add(TFltPr(PoissonCount.GetKey(i)*binSize, PoissonCount[i]+0.0));
+		TGnuPlot Gp("distribution", "Exponential and Poisson Distribution");
+		Gp.AddPlot(XY1, gpwLinesPoints, "Exponential");
+		Gp.AddPlot(XY2, gpwLinesPoints, "Poisson");
+		Gp.SetXYLabel("value", "count");
+		Gp.SavePng(); //or Gp.SaveEps();
+	}
+
+*/
+
+>>>>>>> f1ca97b1eb6a56c91a5413fb2cbb786631e115c6
     return 0;
 }
