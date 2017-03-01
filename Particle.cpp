@@ -18,7 +18,7 @@ using namespace std;
 
 void PrintGStats(const char s[], PUNGraph Graph) {
     cout << "Graph: " << s << " nodes: " << Graph->GetNodes()
-         << " edges: " << Graph->GetEdges() << endl;
+    << " edges: " << Graph->GetEdges() << endl;
 }
 
 long int numCom=0;
@@ -29,9 +29,9 @@ bool timeVarying=false;
 bool snapFormat=false;
 bool searchBeta=false;
 bool verbose=false;
-int steps=20;
+int steps=10000;
 float minDR=0.1;
-string fName, fNameCom;
+string fName, fNameCom="";
 string fileOfNames;
 int maxSteps=1000;
 bool dynamic=false;
@@ -47,8 +47,8 @@ void Message(int i){
         cout << "\t\t-b value -> repulsive parameter (beta) [default: 0.1]\n";
         cout << "\t\t-tr value ->  define the stop condition - theta_R  [default: 1.0]\n";
         cout << "\t\t-max value ->  define the maximum number of steps (iterations)  [default: 1000]\n";
-//        cout << "\t\t-ss number_of_steps -> save states (files.par & files.cen)\n";
-//        cout << "\t\t-sf -> load the input file using the snapFormat\n";
+        //        cout << "\t\t-ss number_of_steps -> save states (files.par & files.cen)\n";
+        //        cout << "\t\t-sf -> load the input file using the snapFormat\n";
         cout << "\t\t-v -> verbose\n";
         cout << "\t\t-sb initial_beta final_beta step -> searching beta [available only for (1)]\n";
         cout << "\n\n";
@@ -62,34 +62,34 @@ void Message(int i){
 
 
 /*
-void ModelByStep(){
-    PParticleNet Model;
-    Model = TParticleNet::LoadFromFile("./net_sample.dat");
-    string saveName;
-    char out[256];
-    int it, st, i;
-//    clock_t ini,end;    
-//    ini = clock();
-    fName = "./net_sample.dat";
-    
-    sprintf(out,"time_0.par");
-    saveName = fName;
-    saveName.replace(fName.size()-3,3,out);
-    Model->SaveParticlePosition(saveName.c_str());
-    cout << "Initial state: " << saveName << endl;
-    
-//    Model->SetModelParameters(alpha, beta, 1.0);
-    cout << "Model running...\n";
-    for (i=0 ; i<100 ; i++){
-        Model->RunByStep();
-        sprintf(out,"time_%d.par",i);
-        saveName = fName;
-        saveName.replace(fName.size()-3,3,out);
-//        cout << "Step: " << i << " - " << saveName.c_str() << endl;
-        Model->SaveParticlePosition(saveName.c_str());
-    }
-}
-*/
+ void ModelByStep(){
+ PParticleNet Model;
+ Model = TParticleNet::LoadFromFile("./net_sample.dat");
+ string saveName;
+ char out[256];
+ int it, st, i;
+ //    clock_t ini,end;
+ //    ini = clock();
+ fName = "./net_sample.dat";
+ 
+ sprintf(out,"time_0.par");
+ saveName = fName;
+ saveName.replace(fName.size()-3,3,out);
+ Model->SaveParticlePosition(saveName.c_str());
+ cout << "Initial state: " << saveName << endl;
+ 
+ //    Model->SetModelParameters(alpha, beta, 1.0);
+ cout << "Model running...\n";
+ for (i=0 ; i<100 ; i++){
+ Model->RunByStep();
+ sprintf(out,"time_%d.par",i);
+ saveName = fName;
+ saveName.replace(fName.size()-3,3,out);
+ //        cout << "Step: " << i << " - " << saveName.c_str() << endl;
+ Model->SaveParticlePosition(saveName.c_str());
+ }
+ }
+ */
 
 void ModelByStep(){
     PParticleNet Model;
@@ -99,18 +99,20 @@ void ModelByStep(){
     clock_t ini,end;
     
     ini = clock();
-
+    
     Model = TParticleNet::LoadFromFile(fName.c_str());
-/*
-    Model->DeleteLink(1,2);
-    for (i=1 ; i<=10 ; i++){
-       for (j=1 ; j<=10 ; j++){
-           cout << Model->DEGUB_(i,j) << "\t";
-       }
-       cout << endl;
-    }
-    return;
-*/
+    if (!fNameCom.empty()) Model->LoadComFile(fNameCom.c_str());
+    
+    /*
+     Model->DeleteLink(1,2);
+     for (i=1 ; i<=10 ; i++){
+     for (j=1 ; j<=10 ; j++){
+     cout << Model->DEGUB_(i,j) << "\t";
+     }
+     cout << endl;
+     }
+     return;
+     */
     sprintf(out,"time_0.par");
     saveName = fName;
     saveName.replace(fName.size()-3,3,out);
@@ -120,18 +122,21 @@ void ModelByStep(){
     Model->SetModelParameters(alpha, beta, 1.0);
     cout << "Model running...\n";
     for (i=1 ; i<steps ; i++){
-       Model->RunByStep();
-       sprintf(out,"time_%d.par",i);
-       saveName = fName;
-       saveName.replace(fName.size()-3,3,out);
-       cout << "Step: " << i << " - " << saveName.c_str() << endl;
-       Model->SaveParticlePosition(saveName.c_str());
-    }   
+        Model->RunByStep2();
+        if (i%10==0) {
+            sprintf(out,"time_%d.par",i);
+            saveName = fName;
+            saveName.replace(fName.size()-3,3,out);
+            cout << "Step: " << i << " - " << saveName.c_str() << endl;
+            Model->SaveParticlePosition(saveName.c_str());
+        }
+    }
     cout << "Detecting clusters...\n";
     Model->CommunityDetection3();
     end = clock();
-
+    
     cout << "# of communities detected: " << Model->getNumCommunities() << endl;
+    if (!fNameCom.empty()) cout << "NMI: " << Model->NMI() << endl;
     cout << "Elapsed time (s): " << ((float)(end-ini))/CLOCKS_PER_SEC << endl;
     
     sprintf(out,"time_final.par");
@@ -139,12 +144,12 @@ void ModelByStep(){
     saveName.replace(fName.size()-3,3,out);
     Model->SaveParticlePosition(saveName.c_str());
     cout << "Final state: " << saveName << endl;
-
-//    sprintf(out,"com");
-//    saveName = fName;
-//    saveName.replace(fName.size()-3,3,out);
-//    Model->SaveCommunities(saveName.c_str());
-//    cout << "Community structure: " << saveName << endl;
+    
+    //    sprintf(out,"com");
+    //    saveName = fName;
+    //    saveName.replace(fName.size()-3,3,out);
+    //    Model->SaveCommunities(saveName.c_str());
+    //    cout << "Community structure: " << saveName << endl;
     
 }
 
@@ -152,8 +157,8 @@ void ModelByStep(){
 int main(int argc,char *argv[]){
     int i=0;
     srand (time(NULL));
-    bool byStep=false;   
- 
+    bool byStep=false;
+    
     if (argc <= 1) Message(0);
     else {
         FILE *stream;
@@ -214,12 +219,12 @@ int main(int argc,char *argv[]){
                 byStep = true;
                 steps = maxSteps;
             }
-//            else if (strcmp(argv[i],"-dynamic")==0){
-//                if (++i>=argc) break;
-//                fileOfNames = argv[i];
-//                dynamic = true;
-//                cout << "Dynamic: " << fileOfNames << endl;
-//            }
+            //            else if (strcmp(argv[i],"-dynamic")==0){
+            //                if (++i>=argc) break;
+            //                fileOfNames = argv[i];
+            //                dynamic = true;
+            //                cout << "Dynamic: " << fileOfNames << endl;
+            //            }
             else if (strcmp(argv[i],"-sb") == 0){
                 searchBeta = true;
                 if (++i>=argc) break;
@@ -230,15 +235,15 @@ int main(int argc,char *argv[]){
                 betaS = (float) strtod(argv[i],NULL);
             }
         }
-//        cout << numCom << " beta " << beta << " alpha " << alpha << endl;
+        //        cout << numCom << " beta " << beta << " alpha " << alpha << endl;
         if (byStep || 1) ModelByStep();
-//        else if (searchBeta) ModelSearchBeta();
-//        else if (dynamic) ModelDynamic();
-//        else Model0();
-
-//        if (saveStates) ModelStep(fName,fNameCom,alpha,beta, steps);
-//        else Model0(fName,fNameCom,alpha,beta);
+        //        else if (searchBeta) ModelSearchBeta();
+        //        else if (dynamic) ModelDynamic();
+        //        else Model0();
+        
+        //        if (saveStates) ModelStep(fName,fNameCom,alpha,beta, steps);
+        //        else Model0(fName,fNameCom,alpha,beta);
     }
-
+    
     return 0;
 }

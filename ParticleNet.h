@@ -70,6 +70,8 @@ public:
 //    int degree;
     float dxA, dyA, dzA;
     float dxR, dyR, dzR;
+    float Vx, Vy, Vz;
+    float Ax, Ay, Az;
     //	float erro;
     int cluster_id;
     TCentroid *index; // community id obtained by the algorithm / pointer to the centroid
@@ -129,8 +131,11 @@ public:
     
     static PParticleNet LoadFromFile(const char *filename);
     void ReloadNetwork(const char *filename);
+    void LoadComFile(const char *filename);
+
 
     void RunByStep();
+    void RunByStep2();
     void SaveParticlePosition(const char *filename);
     int CommunityDetection3();
     void SetModelParameters(float a, float b, float g){
@@ -142,6 +147,8 @@ public:
     void NewLink(int i, int j);
     void DeleteNode(int node_id);
     void DeleteLink(int i, int j);
+    float NMI();
+
 
     int DEGUB_(int i, int j){
         if (IsEdge(i,j)) return 1;//cout << "Link " << i << "-" << j << endl;
