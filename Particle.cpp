@@ -29,11 +29,11 @@ bool timeVarying=false;
 bool snapFormat=false;
 bool searchBeta=false;
 bool verbose=false;
-int steps=10000;
+int steps=100000;
 float minDR=0.1;
 string fName, fNameCom="";
 string fileOfNames;
-int maxSteps=1000;
+int maxSteps=10000;
 bool dynamic=false;
 
 
@@ -104,6 +104,10 @@ void ModelByStep(){
     
     Model = TParticleNet::LoadFromFile(fName.c_str());
     if (!fNameCom.empty()) Model->LoadComFile(fNameCom.c_str());
+  
+//    Model = TParticleNet::LoadClique(10,9);
+//    Model->LoadComFile(5);
+//    fNameCom = "1";
     
     /*
      Model->DeleteLink(1,2);
@@ -124,27 +128,19 @@ void ModelByStep(){
     Model->SetModelParameters(alpha, beta, 1.0);
     cout << "Model running...\n";
     for (i=1 ; i<steps ; i++){
-<<<<<<< HEAD
-        Model->RunByStep2();
-        if (i%10==0) {
+        Model->RunByStep();
+        if (i>=0 && i%1==0) {
             sprintf(out,"time_%d.par",i);
             saveName = fName;
             saveName.replace(fName.size()-3,3,out);
             cout << "Step: " << i << " - " << saveName.c_str() << endl;
             Model->SaveParticlePosition(saveName.c_str());
+//            if (!fNameCom.empty()) {
+//                Model->CommunityDetection3();
+//                cout << "NMI: " << Model->NMI() << endl;
+//            }
         }
     }
-=======
-       Model->RunByStep();
-       sprintf(out,"time_%d.par",i);
-       saveName = fName;
-       saveName.replace(fName.size()-3,3,out);
-       cout << "Step: " << i << " - " << saveName.c_str() << endl;
-       Model->SaveParticlePosition(saveName.c_str());
- //      sprintf(commandsForGnuplot,"splot \"%s\"",saveName.c_str());
- //      fprintf(gnuplotPipe, "%s \n", commandsForGnuplot); //Send commands to gnuplot one by one.
-    }   
->>>>>>> f1ca97b1eb6a56c91a5413fb2cbb786631e115c6
     cout << "Detecting clusters...\n";
     Model->CommunityDetection3();
     end = clock();
@@ -153,7 +149,8 @@ void ModelByStep(){
     if (!fNameCom.empty()) cout << "NMI: " << Model->NMI() << endl;
     cout << "Elapsed time (s): " << ((float)(end-ini))/CLOCKS_PER_SEC << endl;
     
-    sprintf(out,"time_final.par");
+//    sprintf(out,"time_final.par");
+    sprintf(out,"time_%d.par",i);
     saveName = fName;
     saveName.replace(fName.size()-3,3,out);
     Model->SaveParticlePosition(saveName.c_str());
@@ -258,9 +255,6 @@ int main(int argc,char *argv[]){
         //        if (saveStates) ModelStep(fName,fNameCom,alpha,beta, steps);
         //        else Model0(fName,fNameCom,alpha,beta);
     }
-<<<<<<< HEAD
-    
-=======
 
 
 /*
@@ -300,6 +294,5 @@ int main(int argc,char *argv[]){
 
 */
 
->>>>>>> f1ca97b1eb6a56c91a5413fb2cbb786631e115c6
     return 0;
 }

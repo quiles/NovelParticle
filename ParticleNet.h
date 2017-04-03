@@ -72,6 +72,10 @@ public:
     float dxR, dyR, dzR;
     float Vx, Vy, Vz;
     float Ax, Ay, Az;
+    float AxR, AyR, AzR;
+    float AxA, AyA, AzA;
+    float AxT, AyT, AzT;
+    
     //	float erro;
     int cluster_id;
     TCentroid *index; // community id obtained by the algorithm / pointer to the centroid
@@ -130,12 +134,17 @@ public:
     ~TParticleNet() {};
     
     static PParticleNet LoadFromFile(const char *filename);
+    static PParticleNet LoadClique(int nc, int cs);
     void ReloadNetwork(const char *filename);
     void LoadComFile(const char *filename);
+    void LoadComFile(int nc);
 
 
     void RunByStep();
     void RunByStep2();
+    void RunByStepRadial();
+    void RunByStepRadial2();
+
     void SaveParticlePosition(const char *filename);
     int CommunityDetection3();
     void SetModelParameters(float a, float b, float g){
