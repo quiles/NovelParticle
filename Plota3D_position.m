@@ -3,7 +3,7 @@ clear all;
 N = 500;
 inicio = 0;
 step = 1;
-time = 400;
+time = 500;
 s = 0; % box size
 fname = './networkF1';
 

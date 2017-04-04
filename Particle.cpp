@@ -128,6 +128,9 @@ void ModelByStep(){
     Model->SetModelParameters(alpha, beta, 1.0);
     cout << "Model running...\n";
     for (i=1 ; i<steps ; i++){
+//        if (i%100==0) Model->RunByStep(false);
+//        else Model->RunByStep(true);
+        
         Model->RunByStep();
         if (i>=0 && i%1==0) {
             sprintf(out,"time_%d.par",i);

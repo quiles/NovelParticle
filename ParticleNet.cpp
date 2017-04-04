@@ -435,6 +435,7 @@ void TParticleNet::RunByStep(){
         data1->dzR = 0;
     }
     
+//    if (attraction) {
     
     // Attraction
     for (EI=BegEI() ; EI < EndEI() ; EI++){
@@ -448,7 +449,7 @@ void TParticleNet::RunByStep(){
         diffz = data1->z - data2->z;
         r = pow(diffx,2) + pow(diffy,2) + pow(diffz,2);
         r = sqrt(r);
-        if (r<1) r=1.0;
+//        if (r<1) r=1.0;
         sumX = diffx/r;
         sumY = diffy/r;
         sumZ = diffz/r;
@@ -460,6 +461,9 @@ void TParticleNet::RunByStep(){
         data2->dzA += sumZ;
     }
 
+//    }
+//    else {
+    
     float massX=0, massY=0, massZ=0;
     for (NI=BegNI() ; NI < EndNI() ; NI ++){
         data1 = GetNDat(NI.GetId());
@@ -498,6 +502,8 @@ void TParticleNet::RunByStep(){
             data2->dzR += sumZ;
         }
     }
+        
+//    }
     
 //    sumX = sumY = sumZ = 0.0;
 //    float VR;
