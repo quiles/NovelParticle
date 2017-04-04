@@ -132,7 +132,7 @@ void ModelByStep(){
 //        else Model->RunByStep(true);
         
         Model->RunByStep();
-        if (i>=0 && i%1==0) {
+        if (i>=0 && i%100==0) {
             sprintf(out,"time_%d.par",i);
             saveName = fName;
             saveName.replace(fName.size()-3,3,out);
@@ -167,11 +167,47 @@ void ModelByStep(){
     
 }
 
+void ModelLote(){
+    PParticleNet Model;
+    char fcom[256], fnet[256];
+    int i;
+    clock_t ini,end;
+    float mu;
+
+    alpha = 1.0;
+    beta = 0.2;
+    steps = 1000;
+    
+    for (mu=0.6 ; mu<=0.81 ; mu+=0.02){
+        ini = clock();
+
+        sprintf(fnet,"./data1000S/net_m%.2f_r1.dat",mu);
+        sprintf(fcom,"./data1000S/com_m%.2f_r1.dat",mu);
+        cout << "File: " << fnet << endl;
+
+        Model = TParticleNet::LoadFromFile(fnet);
+        Model->LoadComFile(fcom);
+      
+        Model->SetModelParameters(alpha, beta, 1.0);
+        for (i=1 ; i<steps ; i++){
+            Model->RunByStep();
+        }
+        Model->CommunityDetection3();
+        end = clock();
+
+        cout << "# of communities detected: " << Model->getNumCommunities() << endl;
+        cout << "NMI: " << Model->NMI() << endl;
+        cout << "Elapsed time (s): " << ((float)(end-ini))/CLOCKS_PER_SEC << endl;
+    }
+}
+
 
 int main(int argc,char *argv[]){
     int i=0;
     srand (time(NULL));
     bool byStep=false;
+
+//    ModelLote(); return 0;
     
     if (argc <= 1) Message(0);
     else {

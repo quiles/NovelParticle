@@ -66,10 +66,10 @@ class TParticle{
 public:
 //    int node_id;
     //    TUNGraph::TNodeI node;
-    float x, y, z;
+    float x, y, z, u, w;
 //    int degree;
-    float dxA, dyA, dzA;
-    float dxR, dyR, dzR;
+    float dxA, dyA, dzA, duA, dwA;
+    float dxR, dzR, dyR, duR, dwR;
     float Vx, Vy, Vz;
     float Ax, Ay, Az;
     float AxR, AyR, AzR;

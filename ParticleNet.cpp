@@ -418,8 +418,8 @@ void TParticleNet::ResetParticles() {
 //
 
 void TParticleNet::RunByStep(){
-    float sumX, sumY, sumZ, r;
-    float diffx, diffy, diffz;
+    float sumX, sumY, sumZ, sumU, sumW, r;
+    float diffx, diffy, diffz, diffu, diffw;
     TParticleNet::TNodeI NI, NN;
     TParticleNet::TEdgeI EI;
     PParticle data1, data2;
@@ -430,9 +430,14 @@ void TParticleNet::RunByStep(){
         data1->dxA = 0;
         data1->dyA = 0;
         data1->dzA = 0;
+        data1->duA = 0;
+        data1->dwA = 0;
         data1->dxR = 0;
         data1->dyR = 0;
         data1->dzR = 0;
+        data1->duR = 0;
+        data1->dwR = 0;
+
     }
     
 //    if (attraction) {
@@ -447,33 +452,41 @@ void TParticleNet::RunByStep(){
         diffx = data1->x - data2->x;
         diffy = data1->y - data2->y;
         diffz = data1->z - data2->z;
-        r = pow(diffx,2) + pow(diffy,2) + pow(diffz,2);
+        diffu = data1->u - data2->u;
+        diffw = data1->w - data2->w;
+        r = pow(diffx,2) + pow(diffy,2) + pow(diffz,2) + pow(diffu,2) + pow(diffw,2);
         r = sqrt(r);
 //        if (r<1) r=1.0;
         sumX = diffx/r;
         sumY = diffy/r;
         sumZ = diffz/r;
+        sumU = diffu/r;
+        sumW = diffw/r;
         data1->dxA -= sumX;
         data1->dyA -= sumY;
         data1->dzA -= sumZ;
+        data1->duA -= sumU;
+        data1->dwA -= sumW;
         data2->dxA += sumX;
         data2->dyA += sumY;
         data2->dzA += sumZ;
+        data2->duA += sumU;
+        data2->dwA += sumW;
     }
 
 //    }
 //    else {
     
-    float massX=0, massY=0, massZ=0;
-    for (NI=BegNI() ; NI < EndNI() ; NI ++){
-        data1 = GetNDat(NI.GetId());
-        massX += data1->x;
-        massY += data1->y;
-        massZ += data1->z;
-    }
-    massX /= GetNodes();
-    massY /= GetNodes();
-    massZ /= GetNodes();
+//    float massX=0, massY=0, massZ=0;
+//    for (NI=BegNI() ; NI < EndNI() ; NI ++){
+//        data1 = GetNDat(NI.GetId());
+//        massX += data1->x;
+//        massY += data1->y;
+//        massZ += data1->z;
+//    }
+//    massX /= GetNodes();
+//    massY /= GetNodes();
+//    massZ /= GetNodes();
     
     // repulsion
     for (NI=BegNI() ; NI < EndNI() ; NI ++){
@@ -486,7 +499,9 @@ void TParticleNet::RunByStep(){
             diffx = data1->x - data2->x;
             diffy = data1->y - data2->y;
             diffz = data1->z - data2->z;
-            r = pow(diffx,2) + pow(diffy,2) + pow(diffz,2);
+            diffu = data1->u - data2->u;
+            diffw = data1->w - data2->w;
+            r = pow(diffx,2) + pow(diffy,2) + pow(diffz,2) + pow(diffu,2) + pow(diffw,2);
             r = sqrt(r);
 //            sumX = diffx/(r);
 //            sumY = diffy/(r);
@@ -494,12 +509,18 @@ void TParticleNet::RunByStep(){
             sumX = exp(-r)*diffx/(r);
             sumY = exp(-r)*diffy/(r);
             sumZ = exp(-r)*diffz/(r);
+            sumU = exp(-r)*diffu/(r);
+            sumW = exp(-r)*diffw/(r);
             data1->dxR -= sumX;
             data1->dyR -= sumY;
             data1->dzR -= sumZ;
+            data1->duR -= sumU;
+            data1->dwR -= sumW;
             data2->dxR += sumX;
             data2->dyR += sumY;
             data2->dzR += sumZ;
+            data2->duR += sumU;
+            data2->dwR += sumW;
         }
     }
         
@@ -516,13 +537,19 @@ void TParticleNet::RunByStep(){
             data1->dxA = (alpha*data1->dxA)/(float)degree;
             data1->dyA = (alpha*data1->dyA)/(float)degree;
             data1->dzA = (alpha*data1->dzA)/(float)degree;
+            data1->duA = (alpha*data1->duA)/(float)degree;
+            data1->dwA = (alpha*data1->dzA)/(float)degree;
             data1->dxR = (beta*data1->dxR)/(float)degree;
             data1->dyR = (beta*data1->dyR)/(float)degree;
             data1->dzR = (beta*data1->dzR)/(float)degree;
+            data1->duR = (beta*data1->duR)/(float)degree;
+            data1->dwR = (beta*data1->dwR)/(float)degree;
             
             data1->x += DT*((data1->dxA - data1->dxR));
             data1->y += DT*((data1->dyA - data1->dyR));
             data1->z += DT*((data1->dzA - data1->dzR));
+            data1->u += DT*((data1->duA - data1->duR));
+            data1->w += DT*((data1->dwA - data1->dwR));
             
 //            VR = sqrt((data1->dxA*data1->dxA) + (data1->dyA*data1->dyA) + (data1->dzA*data1->dzA));
 //            
