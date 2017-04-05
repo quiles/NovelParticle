@@ -29,7 +29,8 @@ bool timeVarying=false;
 bool snapFormat=false;
 bool searchBeta=false;
 bool verbose=false;
-int steps=100000;
+int steps=1000;
+int savestep=100;
 float minDR=0.1;
 string fName, fNameCom="";
 string fileOfNames;
@@ -127,12 +128,9 @@ void ModelByStep(){
     
     Model->SetModelParameters(alpha, beta, 1.0);
     cout << "Model running...\n";
-    for (i=1 ; i<steps ; i++){
-//        if (i%100==0) Model->RunByStep(false);
-//        else Model->RunByStep(true);
-        
+    for (i=1 ; i<steps ; i++){        
         Model->RunByStep();
-        if (i>=0 && i%100==0) {
+        if (i>=0 && i%savestep==0) {
             sprintf(out,"time_%d.par",i);
             saveName = fName;
             saveName.replace(fName.size()-3,3,out);
@@ -252,6 +250,11 @@ int main(int argc,char *argv[]){
             }
             else if (strcmp(argv[i],"-ss") == 0){
                 saveStates = true;
+                if (++i>=argc) break;
+                savestep = strtol(argv[i],NULL,10);
+                if (savestep == 0) --i;
+            }
+            else if (strcmp(argv[i],"-ms") == 0){
                 if (++i>=argc) break;
                 steps = strtol(argv[i],NULL,10);
                 if (steps == 0) --i;

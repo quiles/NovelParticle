@@ -1,11 +1,11 @@
 clear all;
 
-N = 500;
+N = 128;
 inicio = 0;
-step = 1;
-time = 500;
+step = 10;
+time = 300;
 s = 0; % box size
-fname = './networkF1';
+fname = './net_m0.10_r1';
 
 si = ceil(time/step)
 
@@ -16,7 +16,7 @@ AccA = zeros(1,si);
 
 idX = [0];
 
-nColors = 17;
+nColors = 5;
 
 cores = jet(nColors);
 % cores = [166 206 227; % 1
@@ -55,10 +55,10 @@ for i=inicio:step:time
             
         hold on;
 %         set(p, 'MarkerSize',50);
-        if (a(j,4) == mod(count,16)+1) 
+%        if (a(j,4) == mod(count,16)+1) 
             set(p,'Color',cores(a(j,4)+1,:), 'MarkerSize',40);
-        else set(p,'Color',[0 0 0], 'MarkerSize',20);
-        end;
+%        else set(p,'Color',[0 0 0], 'MarkerSize',20);
+ %       end;
         FA(j) = (a(j,6)^2 + a(j,7)^2 + a(j,8)^2)^(1/2);
         FR(j) = (a(j,9)^2 + a(j,10)^2 + a(j,11)^2)^(1/2);
         FRes(j) = ((a(j,6)-a(j,9))^2 + (a(j,7)-a(j,10))^2 + (a(j,8)-a(j,11))^2)^(1/2);

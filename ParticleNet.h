@@ -8,13 +8,14 @@
 #ifndef PHASESEPARATION_H_
 #define PHASESEPARATION_H_
 
-
 #include <iostream>
 #include <vector>
 #include "Snap.h"
 
 #undef min
 #undef max
+
+#define PDIM 8
 
 using namespace std;
 
@@ -25,12 +26,16 @@ typedef TParticle* PParticle;
 
 class TCentroid{
 public:
-    float x, y, z;
+    float x[PDIM];
     float error;
     int nparticles; // store the number of associated particles
     int comm_id;
     float totalR; // sum of the repulsion inside the cluster
     float totalA; // sum of the attraction inside the cluster
+    TCentroid(){
+    };
+    ~TCentroid(){
+    };
 };
 
 class TNode{
@@ -66,15 +71,17 @@ class TParticle{
 public:
 //    int node_id;
     //    TUNGraph::TNodeI node;
-    float x, y, z, u, w;
+    int auxi;
+    float x[PDIM];
 //    int degree;
-    float dxA, dyA, dzA, duA, dwA;
-    float dxR, dzR, dyR, duR, dwR;
+    float dA[PDIM];
+    float dR[PDIM];
     float Vx, Vy, Vz;
     float Ax, Ay, Az;
     float AxR, AyR, AzR;
     float AxA, AyA, AzA;
     float AxT, AyT, AzT;
+
     
     //	float erro;
     int cluster_id;
@@ -84,7 +91,10 @@ public:
     bool refreshed; // indicates whether a node has been updated
     
 public:
-    TParticle() {};
+    TParticle() {
+    };
+    ~TParticle(){
+    }
 //    TParticle(const PParticle &pIn){
 //        x = pIn.x; y = pIn.y; z = pIn.z;
 //        index = pIn.index; indexReal = pIn.indexReal; cluster_id = pIn.cluster_id;
@@ -97,6 +107,12 @@ public:
 
 class TParticleNet : public TNodeNet<TNode> {
 private:
+    // auxiliar variables
+    int i,j,k;
+    int id1, id2, degree;
+    float sum[PDIM], r;
+    float diff[PDIM];
+
     float alpha; // attraction strength
     float beta; // repulsion strength
     float gamma; // repulsion decai, constant at 1.0
@@ -104,7 +120,7 @@ private:
     float addCentroidThreshold;
     float mergeCentroidThreshold;
     //    int centroidTransient;
-    
+
     vector <TCentroid> Centroids;
 
     int nextComId;
