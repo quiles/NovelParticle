@@ -425,7 +425,7 @@ void TParticleNet::RunByStep(){
         r = 0;
         for (i=0 ; i<PDIM ; i++) r += diff[i]*diff[i];
         r = sqrt(r);
-//        if (r<1.0) r=1.0;
+        if (r<1.0) r=1.0;
         for (i=0 ; i<PDIM ; i++) sum[i] = diff[i]/r;
         for (i=0 ; i<PDIM ; i++) {
             data1->dA[i] -= sum[i];
@@ -457,9 +457,10 @@ void TParticleNet::RunByStep(){
         if ((degree = NI.GetDeg())){
             data1 = GetNDat(NI.GetId());            
             for (i=0 ; i<PDIM ; i++) {
-                data1->dA[i] = (alpha*data1->dA[i])/(float)degree;
-                data1->dR[i] = (beta*data1->dR[i])/(float)degree;
-                data1->x[i] += DT*((data1->dA[i] - data1->dR[i]));
+//                data1->dA[i] = (alpha*data1->dA[i])/(float)degree;
+//                data1->dR[i] = (beta*data1->dR[i])/(float)degree;
+//                data1->x[i] += DT*((data1->dA[i] - data1->dR[i]));
+                data1->x[i] += ((alpha*data1->dA[i] - beta*data1->dR[i]))/degree;
             }
         }
     }
@@ -1501,6 +1502,7 @@ void TParticleNet::SaveParticlePosition(const char *filename){
     ofstream file;
     TParticleNet::TNodeI NI;
     PParticle data;
+    float DR, DA; 
 
     file.open(filename, ofstream::out);
     file << "% Particle's file -> a snapshot of the particle space\n";
@@ -1515,8 +1517,14 @@ void TParticleNet::SaveParticlePosition(const char *filename){
                                              << data->indexReal << "\t" 
                                              << data->index->comm_id << "\t";
             for (i=0 ; i<PDIM ; i++)  file << fixed << setprecision(2) << data->x[i] << "\t";
-            for (i=0 ; i<PDIM ; i++)  file << fixed << setprecision(2) << data->dA[i] << "\t";
-            for (i=0 ; i<PDIM ; i++)  file << fixed << setprecision(2) << data->dR[i] << "\t";
+	    DA = DR = 0.0;
+            for (i=0 ; i<PDIM ; i++) {
+                DA += data->dA[i]*data->dA[i]; DA = sqrt(DA);
+                DR += data->dR[i]*data->dR[i]; DR = sqrt(DR);
+            }
+            file << fixed << setprecision(2) << DA << "\t" << DR << "\t";
+//            for (i=0 ; i<PDIM ; i++)  file << fixed << setprecision(2) << data->dA[i] << "\t";
+//            for (i=0 ; i<PDIM ; i++)  file << fixed << setprecision(2) << data->dR[i] << "\t";
             file << endl;
         }
         else {
@@ -1524,8 +1532,14 @@ void TParticleNet::SaveParticlePosition(const char *filename){
                                              << data->indexReal << "\t" 
                                              << "-1" << "\t";
             for (i=0 ; i<PDIM ; i++)  file << fixed << setprecision(2) << data->x[i] << "\t";
-            for (i=0 ; i<PDIM ; i++)  file << fixed << setprecision(2) << data->dA[i] << "\t";
-            for (i=0 ; i<PDIM ; i++)  file << fixed << setprecision(2) << data->dR[i] << "\t";
+//            for (i=0 ; i<PDIM ; i++)  file << fixed << setprecision(2) << data->dA[i] << "\t";
+//            for (i=0 ; i<PDIM ; i++)  file << fixed << setprecision(2) << data->dR[i] << "\t";
+	    DA = DR = 0.0;
+            for (i=0 ; i<PDIM ; i++) {
+                DA += data->dA[i]*data->dA[i]; DA = sqrt(DA);
+                DR += data->dR[i]*data->dR[i]; DR = sqrt(DR);
+            }
+            file << fixed << setprecision(2) << DA << "\t" << DR;
             file << endl;
         }
     }

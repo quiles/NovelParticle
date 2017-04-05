@@ -15,7 +15,7 @@
 #undef min
 #undef max
 
-#define PDIM 8
+#define PDIM 3
 
 using namespace std;
 
