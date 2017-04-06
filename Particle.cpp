@@ -34,7 +34,7 @@ int savestep=100;
 float minDR=0.1;
 string fName, fNameCom="";
 string fileOfNames;
-int maxSteps=10000;
+int maxSteps=1000;
 bool dynamic=false;
 
 
@@ -92,34 +92,62 @@ void Message(int i){
  }
  */
 
+void ModelDynamic(){
+    PParticleNet Model;
+    string saveName;
+    int it, st;
+    char out[256];
+    bool firstIt=true;
+    
+    ifstream file (fileOfNames.c_str());
+
+    while  (file >> fName){
+        if (firstIt){
+            Model = TParticleNet::LoadFromFile(fName.c_str());
+            Model->SetModelParameters(alpha, beta, 1.0);
+            sprintf(out,"time_0.par");
+            saveName = fName;
+            saveName.replace(fName.size()-3,3,out);
+            cout << "Initial state: " << saveName << endl;
+            Model->SaveParticlePosition(saveName.c_str());
+            firstIt = false;
+        }
+        else {
+            Model->ReloadNetwork(fName.c_str());
+        }
+        cout << "Running model on: " << fName << endl;
+
+        it = Model->RunModel(1,minDR,verbose);
+
+        st = Model->CommunityDetection3();
+        cout << "Total steps: " << it << endl;
+        cout << "# of communities detected: " << Model->getNumCommunities() << endl;
+        cout << "Accumulated centroid error: " << Model->printCentroidsError() << endl;
+        
+        saveName = fName;
+        saveName.replace(fName.size()-3,3,"par");
+        Model->SaveParticlePosition(saveName.c_str());
+        cout << "Current state file: " << saveName << endl;
+        
+//        saveName.replace(fName.size()-3,3,"com");
+//        Model->SaveCommunities(saveName.c_str());
+//        cout << "Current community structure: " << saveName << endl << endl;
+    }
+}
+
+
 void ModelByStep(){
-//    char commandsForGnuplot[1024] = {"set title \"Particles\""};
     PParticleNet Model;
     string saveName;
     char out[256];
     int i;
     clock_t ini,end;
-//    FILE * gnuplotPipe = popen ("gnuplot -persistent", "w");
     
     ini = clock();
     
     Model = TParticleNet::LoadFromFile(fName.c_str());
     if (!fNameCom.empty()) Model->LoadComFile(fNameCom.c_str());
   
-//    Model = TParticleNet::LoadClique(10,9);
-//    Model->LoadComFile(5);
-//    fNameCom = "1";
-    
-    /*
-     Model->DeleteLink(1,2);
-     for (i=1 ; i<=10 ; i++){
-     for (j=1 ; j<=10 ; j++){
-     cout << Model->DEGUB_(i,j) << "\t";
-     }
-     cout << endl;
-     }
-     return;
-     */
     sprintf(out,"time_0.par");
     saveName = fName;
     saveName.replace(fName.size()-3,3,out);
@@ -128,6 +156,9 @@ void ModelByStep(){
     
     Model->SetModelParameters(alpha, beta, 1.0);
     cout << "Model running...\n";
+
+//    Model->RunModel(steps, 0.1, false);
+
     for (i=1 ; i<steps ; i++){        
         Model->RunByStep();
         if (i>=0 && i%savestep==0) {
@@ -142,6 +173,7 @@ void ModelByStep(){
 //            }
         }
     }
+
     cout << "Detecting clusters...\n";
     Model->CommunityDetection3();
     end = clock();
@@ -150,20 +182,52 @@ void ModelByStep(){
     if (!fNameCom.empty()) cout << "NMI: " << Model->NMI() << endl;
     cout << "Elapsed time (s): " << ((float)(end-ini))/CLOCKS_PER_SEC << endl;
     
-//    sprintf(out,"time_final.par");
     sprintf(out,"time_%d.par",i);
     saveName = fName;
     saveName.replace(fName.size()-3,3,out);
     Model->SaveParticlePosition(saveName.c_str());
-    cout << "Final state: " << saveName << endl;
-    
-    //    sprintf(out,"com");
-    //    saveName = fName;
-    //    saveName.replace(fName.size()-3,3,out);
-    //    Model->SaveCommunities(saveName.c_str());
-    //    cout << "Community structure: " << saveName << endl;
-    
+    cout << "Final state: " << saveName << endl;    
 }
+
+
+void Model0(){
+    PParticleNet Model;
+    string saveName;
+    char out[256];
+    int i;
+    clock_t ini,end;
+    
+    ini = clock();
+    
+    Model = TParticleNet::LoadFromFile(fName.c_str());
+    if (!fNameCom.empty()) Model->LoadComFile(fNameCom.c_str());
+  
+    sprintf(out,"time_0.par");
+    saveName = fName;
+    saveName.replace(fName.size()-3,3,out);
+    Model->SaveParticlePosition(saveName.c_str());
+    cout << "Initial state: " << saveName << endl;
+    
+    Model->SetModelParameters(alpha, beta, 1.0);
+    cout << "Model running...\n";
+
+    Model->RunModel(steps, minDR, verbose);
+
+    cout << "Detecting clusters...\n";
+    Model->CommunityDetection3();
+    end = clock();
+    
+    cout << "# of communities detected: " << Model->getNumCommunities() << endl;
+    if (!fNameCom.empty()) cout << "NMI: " << Model->NMI() << endl;
+    cout << "Elapsed time (s): " << ((float)(end-ini))/CLOCKS_PER_SEC << endl;
+    
+    sprintf(out,"time_%d.par",i);
+    saveName = fName;
+    saveName.replace(fName.size()-3,3,out);
+    Model->SaveParticlePosition(saveName.c_str());
+    cout << "Final state: " << saveName << endl;    
+}
+
 
 void ModelLote(){
     PParticleNet Model;
@@ -288,53 +352,13 @@ int main(int argc,char *argv[]){
                 betaS = (float) strtod(argv[i],NULL);
             }
         }
-        //        cout << numCom << " beta " << beta << " alpha " << alpha << endl;
-        if (byStep || 1) ModelByStep();
-        //        else if (searchBeta) ModelSearchBeta();
-        //        else if (dynamic) ModelDynamic();
-        //        else Model0();
-        
-        //        if (saveStates) ModelStep(fName,fNameCom,alpha,beta, steps);
-        //        else Model0(fName,fNameCom,alpha,beta);
+
+        if (byStep) ModelByStep();
+//        else if (searchBeta) ModelSearchBeta();
+        else if (dynamic) ModelDynamic();
+        else Model0();
     }
 
-
-/*
-	TIntH expCount, PoissonCount;
-	TRnd a;
-	double binSize=0.1;
-	//exponential distribution	
-	for (int i=0; i<10000; ++i)
-	{
-		double num=a.GetExpDev(1);
-		expCount.AddDat((int)(num/binSize))++;
-	}
-
-	//Poisson distribution	
-	for (int i=0; i<10000; ++i)
-	{
-		double num=a.GetPoissonDev(10);
-		PoissonCount.AddDat((int)(num/binSize))++;
-	}
-
-
-	expCount.Sort(true,true);
-	PoissonCount.Sort(true,true);
-
-	{
-		TVec<TPair<TFlt, TFlt > > XY1, XY2;
-		for (int i=0; i<expCount.Len(); ++i)
-			XY1.Add(TFltPr(expCount.GetKey(i)*binSize, expCount[i]+0.0));
-		for (int i=0; i<PoissonCount.Len(); ++i)
-			XY2.Add(TFltPr(PoissonCount.GetKey(i)*binSize, PoissonCount[i]+0.0));
-		TGnuPlot Gp("distribution", "Exponential and Poisson Distribution");
-		Gp.AddPlot(XY1, gpwLinesPoints, "Exponential");
-		Gp.AddPlot(XY2, gpwLinesPoints, "Poisson");
-		Gp.SetXYLabel("value", "count");
-		Gp.SavePng(); //or Gp.SaveEps();
-	}
-
-*/
 
     return 0;
 }

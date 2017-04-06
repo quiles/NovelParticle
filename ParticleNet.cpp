@@ -126,6 +126,10 @@ PParticleNet TParticleNet::LoadFromFile(const char *filename){
     PParticle particle;
     int id1, id2;
     int lixo;
+
+//TLink data;
+//data.weight = 1;
+
     while (fscanf(stream, "%d %d", &id1, &id2) == 2){
 //cout << "\n " << id1 << "|" << id2 << " -> ";
         if (!net->IsNode(id1)) {
@@ -157,13 +161,27 @@ PParticleNet TParticleNet::LoadFromFile(const char *filename){
         if (!net->IsEdge(id1,id2)) {
             net->AddEdge(id1, id2);
             net->AddEdge(id2, id1);
+//            data.weight = data.weight + 1;
+//            data.age = rand()%1000;
+//            net->SetEDat(id1,id2,data);
+//            data.weight = data.weight + 1;
+//            data.age = rand()%1000;
+//            net->SetEDat(id2,id1,data);
         }
     }
     fclose(stream);
+
     return net;
-
-
 }
+
+/*
+
+  for (TNodeEDatNet<TInt, TInt>::TEdgeI EI = Net->BegEI(); EI < Net->EndEI(); EI++) {
+    Net->SetEDat(EI.GetSrcNId(),EI.GetDstNId(),EI.GetSrcNId()*EI.GetDstNId());
+  }
+
+*/
+
 
 void TParticleNet::ReloadNetwork(const char *filename){
     FILE *stream;
@@ -185,6 +203,7 @@ void TParticleNet::ReloadNetwork(const char *filename){
         id1 = EI.GetSrcNId();
         id2 = EI.GetDstNId();
         DelEdge(id1,id2,false);
+        DelEdge(id2,id1,false);
     }
     
 
@@ -199,7 +218,7 @@ void TParticleNet::ReloadNetwork(const char *filename){
             AddNode(id1,particle);
         }
         else {
-            particle = GetNDat(NI.GetId());
+            particle = GetNDat(id1);
             particle->refreshed = true;
         }
 
@@ -213,7 +232,7 @@ void TParticleNet::ReloadNetwork(const char *filename){
             AddNode(id2,particle);
         }
         else {
-            particle = GetNDat(NI.GetId());
+            particle = GetNDat(id2);
             particle->refreshed = true;
         }
 
@@ -224,14 +243,18 @@ void TParticleNet::ReloadNetwork(const char *filename){
     }
     fclose(stream);
 
+    
+
     // remove unrefreshed nodes
     for (NI=BegNI(); NI<EndNI(); NI++) {
+        cout << NI.GetDeg() << " ";
         particle = GetNDat(NI.GetId());
 	if (!particle->refreshed) {
             delete particle;
             DelNode(NI.GetId());
         }
     }
+    cout << endl;
 }
 
 
@@ -337,7 +360,7 @@ void TParticleNet::ResetParticles() {
 //}
 //
 //// still under development -> it aims to reduce the number of steps when new nodes are added.
-//// Some iterations performed only on the new nodes can make the convergence quick...
+//// Some iterations performed only on the new nodes can make the convergence faster...
 //
 //void TParticleNet::RunForNewNodes(int steps){
 //    float sumX, sumY, sumZ, r, dist;
@@ -467,458 +490,97 @@ void TParticleNet::RunByStep(){
 }
 
 
-//void TParticleNet::AddNoise(){
-//    float sumX, sumY, sumZ, r;
-//    float diffx, diffy, diffz;
-//    TParticleNet::TNodeI NI, NN;
-//    TParticleNet::TEdgeI EI;
-//    PParticle data1, data2;
-//    int id1, id2, degree;
-//
-//    sumX = sumY = sumZ = 0.0;
-//    for (NI=BegNI(); NI<EndNI(); NI++) {
-//        if ((degree = NI.GetDeg())){
-//            data1 = GetNDat(NI.GetId());
-//            data1->x += DT*((alpha*data1->dxA - beta*data1->dxR)) / (float)degree;
-//            data1->y += DT*((alpha*data1->dyA - beta*data1->dyR)) / (float)degree;
-//            data1->z += DT*((alpha*data1->dzA - beta*data1->dzR)) / (float)degree;
-//            
-//            // Debug
-//            data1->dxA = (alpha*data1->dxA)/(float)degree;
-//            data1->dyA = (alpha*data1->dyA)/(float)degree;
-//            data1->dzA = (alpha*data1->dzA)/(float)degree;
-//            data1->dxR = (beta*data1->dxR)/(float)degree;
-//            data1->dyR = (beta*data1->dyR)/(float)degree;
-//            data1->dzR = (beta*data1->dzR)/(float)degree;
-//        }
-//    }
-//    
-//}
-
-/*
-void TParticleNet::RunByStepRadial(){
-    float sumX, sumY, sumZ, r;
-    float diffx, diffy, diffz;
+int TParticleNet::RunModel(int maxIT, float minDR, bool verbose){
     TParticleNet::TNodeI NI, NN;
     TParticleNet::TEdgeI EI;
     PParticle data1, data2;
-    int id1, id2, degree;
+    int steps=0;
+    float value;
+
+    if (verbose) cout << " Step#   \\theta_R   \\Delta\\theta_R \n";
     
-    for (NI=BegNI(); NI<EndNI(); NI++) {
-        data1 = GetNDat(NI.GetId());
-        data1->dxA = 0;
-        data1->dyA = 0;
-        data1->dzA = 0;
-        data1->dxR = 0;
-        data1->dyR = 0;
-        data1->dzR = 0;
-    }
-
-
-    // Attraction
-    for (EI=BegEI() ; EI < EndEI() ; EI++){
-        id1 = EI.GetSrcNId();
-        id2 = EI.GetDstNId();
-        // Loading node's data;
-        data1 = GetNDat(id1);
-        data2 = GetNDat(id2);
-        diffx = data1->x - data2->x;
-        diffy = data1->y - data2->y;
-        diffz = data1->z - data2->z;
-        r = pow(diffx,2) + pow(diffy,2) + pow(diffz,2);
-        r = sqrt(r);
-        if (r<1.0) r = 4.0;
-        sumX = diffx/r;
-        sumY = diffy/r;
-        sumZ = diffz/r;
-        data1->dxA -= sumX;
-        data1->dyA -= sumY;
-        data1->dzA -= sumZ;
-        data2->dxA += sumX;
-        data2->dyA += sumY;
-        data2->dzA += sumZ;
-    }
-
-    float massX=0, massY=0, massZ=0;
-    for (NI=BegNI() ; NI < EndNI() ; NI ++){
-        data1 = GetNDat(NI.GetId());
-        massX += data1->x;
-        massY += data1->y;
-        massZ += data1->z;
-    }
-    massX /= 128.0;
-    massY /= 128.0;
-    massZ /= 128.0;
-    
-    //Repulsion
-    for (NI=BegNI() ; NI < EndNI() ; NI ++){
-        data1 = GetNDat(NI.GetId());
-
-        diffx = data1->x - massX;
-        diffy = data1->y - massY;
-        diffz = data1->z - massZ;
-        r = pow(diffx,2) + pow(diffy,2) + pow(diffz,2);
-        r = sqrt(r);
-
-        sumX = exp(-1.0*(r-1.0))*diffx/(r);
-        sumY = exp(-1.0*(r-1.0))*diffy/(r);
-        sumZ = exp(-1.0*(r-1.0))*diffz/(r);
-        data1->dxR += sumX;
-        data1->dyR += sumY;
-        data1->dzR += sumZ;
-//            data2->dxR += sumX;
-//            data2->dyR += sumY;
-//            data2->dzR += sumZ;
-
-    }
-    
-//    alpha = 1.0;
-//    beta = 0.2;
-    sumX = sumY = sumZ = 0.0;
-    for (NI=BegNI(); NI<EndNI(); NI++) {
-        if ((degree = NI.GetDeg())){
+    do {
+        
+        for (NI=BegNI(); NI<EndNI(); NI++) {
             data1 = GetNDat(NI.GetId());
-            data1->x += ((alpha*data1->dxA - beta*data1->dxR)) / (float)degree;
-            data1->y += ((alpha*data1->dyA - beta*data1->dyR)) / (float)degree;
-            data1->z += ((alpha*data1->dzA - beta*data1->dzR)) / (float)degree;
+            for (i=0 ; i<PDIM ; i++) {
+                data1->dA[i] = 0;
+                data1->dR[i] = 0;
+            }
         }
-    }
+
+        // Algorithm CORE (O(n^2))
+
+        // Attraction
+        for (EI=BegEI() ; EI < EndEI() ; EI++){
+            id1 = EI.GetSrcNId();
+            id2 = EI.GetDstNId();
+            // Loading node's data;
+            data1 = GetNDat(id1);
+            data2 = GetNDat(id2);
+            for (i=0 ; i<PDIM ; i++) diff[i] = data1->x[i] - data2->x[i];
+            r = 0;
+            for (i=0 ; i<PDIM ; i++) r += diff[i]*diff[i];
+            r = sqrt(r);
+            if (r<1.0) r=1.0;
+            for (i=0 ; i<PDIM ; i++) sum[i] = diff[i]/r;
+            for (i=0 ; i<PDIM ; i++) {
+                data1->dA[i] -= sum[i];
+                data2->dA[i] += sum[i];
+            }
+        }
+
+    
+        // repulsion
+        for (NI=BegNI() ; NI < EndNI() ; NI ++){
+            data1 = GetNDat(NI.GetId());
+            for (NN=NI ; NN < EndNI() ; NN++){
+                if (NI.IsNbrNId(NN.GetId()) || NI==NN) continue;
+                data2 = GetNDat(NN.GetId());         
+                for (i=0 ; i<PDIM ; i++) diff[i] = data1->x[i] - data2->x[i];
+                r = 0;
+                for (i=0 ; i<PDIM ; i++) r += diff[i]*diff[i];
+                r = sqrt(r);
+                for (i=0 ; i<PDIM ; i++) sum[i] = exp(-r)*diff[i]/(r);
+
+                for (i=0 ; i<PDIM ; i++) {
+                    data1->dR[i] -= sum[i];
+                    data2->dR[i] += sum[i];
+                }
+            }
+        }
+        
+        oldRR2 = oldRR;
+        oldRR = RR;
+        RR = 0.0;
+	float tempR;
+        for (NI=BegNI(); NI<EndNI(); NI++) {
+            if ((degree = NI.GetDeg())){
+                data1 = GetNDat(NI.GetId());            
+                tempR = 0;
+                for (i=0 ; i<PDIM ; i++) {
+                    data1->x[i] += ((alpha*data1->dA[i] - beta*data1->dR[i]))/degree;
+                    tempR += fabs(data1->dA[i]);
+                }
+                RR += tempR/degree;
+            }
+        }
+
+
+        // end Algorithm CORE
+        
+        
+        RR = RR*0.1 + oldRR*0.9; // used to make the evolution of RR more stable (due to the numerical integration step DT=1.0.
+        ++steps;
+    
+        value = fabs(oldRR2-RR); // / (float)Particles.size();
+        if (verbose) cout << steps << " " << RR << " " << value << endl;
+    } while (steps<maxIT && value > minDR);
+    return steps;
 }
 
-void TParticleNet::RunByStepRadial2(){
-    float sumX, sumY, sumZ, r;
-    float diffx, diffy, diffz;
-    TParticleNet::TNodeI NI, NN;
-    TParticleNet::TEdgeI EI;
-    PParticle data1, data2;
-    int id1, id2, degree;
-    
-    for (NI=BegNI(); NI<EndNI(); NI++) {
-        data1 = GetNDat(NI.GetId());
-        data1->dxA = 0;
-        data1->dyA = 0;
-        data1->dzA = 0;
-        data1->dxR = 0;
-        data1->dyR = 0;
-        data1->dzR = 0;
-        data1->AxA = 0;
-        data1->AyA = 0;
-        data1->AzA = 0;
-        data1->AxR = 0;
-        data1->AyR = 0;
-        data1->AzR = 0;
 
-    }
-    
-    
-    // Attraction
-    for (EI=BegEI() ; EI < EndEI() ; EI++){
-        id1 = EI.GetSrcNId();
-        id2 = EI.GetDstNId();
-        // Loading node's data;
-        data1 = GetNDat(id1);
-        data2 = GetNDat(id2);
-        diffx = data1->x - data2->x;
-        diffy = data1->y - data2->y;
-        diffz = data1->z - data2->z;
-        r = pow(diffx,2) + pow(diffy,2) + pow(diffz,2);
-        r = sqrt(r);
-//        r = 1.0 / (1.0 + exp(-r));
-//        if (r==0) r = 0.00001; // to avoid division per zero when two particles are in the same position
-//        r = 1.0;
-//        sumX = diffx*r;
-//        sumY = diffy*r;
-//        sumZ = diffz*r;
-//        sumX = diffx/r;
-//        sumY = diffy/r;
-//        sumZ = diffz/r;
-        sumX = (diffx/r)*(1.0 + 0.0/r);
-        sumY = (diffy/r)*(1.0 + 0.0/r);
-        sumZ = (diffz/r)*(1.0 + 0.0/r);
-        data1->dxA -= sumX;
-        data1->dyA -= sumY;
-        data1->dzA -= sumZ;
-        data2->dxA += sumX;
-        data2->dyA += sumY;
-        data2->dzA += sumZ;
 
-        data1->AxA -= fabs(sumX);
-        data1->AyA -= fabs(sumY);
-        data1->AzA -= fabs(sumZ);
-        data2->AxA += fabs(sumX);
-        data2->AyA += fabs(sumY);
-        data2->AzA += fabs(sumZ);
-    }
-    
-    float massX=0, massY=0, massZ=0;
-    for (NI=BegNI() ; NI < EndNI() ; NI ++){
-        data1 = GetNDat(NI.GetId());
-        massX += data1->x;
-        massY += data1->y;
-        massZ += data1->z;
-    }
-    massX /= 128.0;
-    massY /= 128.0;
-    massZ /= 128.0;
-    
-    //Repulsion
-    for (NI=BegNI() ; NI < EndNI() ; NI ++){
-        data1 = GetNDat(NI.GetId());
-        
-        diffx = data1->x - massX;
-        diffy = data1->y - massY;
-        diffz = data1->z - massZ;
-        r = pow(diffx,2) + pow(diffy,2) + pow(diffz,2);
-//        r = sqrt(r);
-        sumX = diffx/(r);
-        sumY = diffy/(r);
-        sumZ = diffz/(r);
-        data1->dxR -= sumX;
-        data1->dyR -= sumY;
-        data1->dzR -= sumZ;
-        data2->dxR += sumX;
-        data2->dyR += sumY;
-        data2->dzR += sumZ;
-        
-        data1->AxR -= fabs(sumX);
-        data1->AyR -= fabs(sumY);
-        data1->AzR -= fabs(sumZ);
-        data2->AxR += fabs(sumX);
-        data2->AyR += fabs(sumY);
-        data2->AzR += fabs(sumZ);
-
-    }
-    
-    sumX = sumY = sumZ = 0.0;
-    for (NI=BegNI(); NI<EndNI(); NI++) {
-        if ((degree = NI.GetOutDeg())){
-            data1 = GetNDat(NI.GetId());
-            
-            data1->Ax = DT*((alpha*data1->dxA - beta*data1->dxR)) / (float)degree;
-            data1->Ay = DT*((alpha*data1->dyA - beta*data1->dyR)) / (float)degree;
-            data1->Az = DT*((alpha*data1->dzA - beta*data1->dzR)) / (float)degree;
-            
-            data1->AxT = fabs(data1->Ax);
-            data1->AyT = fabs(data1->Ay);
-            data1->AzT = fabs(data1->Az);
-            
-            data1->Vx += DT*data1->Ax;
-            data1->Vy += DT*data1->Ay;
-            data1->Vz += DT*data1->Az;
-
-            data1->x += data1->Vx*DT;
-            data1->y += data1->Vy*DT;
-            data1->z += data1->Vz*DT;
-        }
-    }
-}
-
-void TParticleNet::RunByStep2(){
-    float sumX, sumY, sumZ, r;
-    float diffx, diffy, diffz;
-    TParticleNet::TNodeI NI, NN;
-    TParticleNet::TEdgeI EI;
-    PParticle data1, data2;
-    int id1, id2, degree;
-    
-    for (NI=BegNI(); NI<EndNI(); NI++) {
-        data1 = GetNDat(NI.GetId());
-        data1->dxA = 0;
-        data1->dyA = 0;
-        data1->dzA = 0;
-        data1->dxR = 0;
-        data1->dyR = 0;
-        data1->dzR = 0;
-        data1->AxA = 0;
-        data1->AyA = 0;
-        data1->AzA = 0;
-        data1->AxR = 0;
-        data1->AyR = 0;
-        data1->AzR = 0;
-        
-    }
-    
-    
-    // Attraction
-    for (EI=BegEI() ; EI < EndEI() ; EI++){
-        id1 = EI.GetSrcNId();
-        id2 = EI.GetDstNId();
-        // Loading node's data;
-        data1 = GetNDat(id1);
-        data2 = GetNDat(id2);
-        diffx = data1->x - data2->x;
-        diffy = data1->y - data2->y;
-        diffz = data1->z - data2->z;
-        r = pow(diffx,2) + pow(diffy,2) + pow(diffz,2);
-        r = sqrt(r);
-        //        r = 1.0 / (1.0 + exp(-r));
-        //        if (r==0) r = 0.00001; // to avoid division per zero when two particles are in the same position
-        //        r = 1.0;
-        //        sumX = diffx*r;
-        //        sumY = diffy*r;
-        //        sumZ = diffz*r;
-        //        sumX = diffx/r;
-        //        sumY = diffy/r;
-        //        sumZ = diffz/r;
-        sumX = (diffx/r)*(1.0 + 0.0/r);
-        sumY = (diffy/r)*(1.0 + 0.0/r);
-        sumZ = (diffz/r)*(1.0 + 0.0/r);
-        data1->dxA -= sumX;
-        data1->dyA -= sumY;
-        data1->dzA -= sumZ;
-        data2->dxA += sumX;
-        data2->dyA += sumY;
-        data2->dzA += sumZ;
-        
-        data1->AxA -= fabs(sumX);
-        data1->AyA -= fabs(sumY);
-        data1->AzA -= fabs(sumZ);
-        data2->AxA += fabs(sumX);
-        data2->AyA += fabs(sumY);
-        data2->AzA += fabs(sumZ);
-    }
-    
-    // Repulsion
-    for (NI=BegNI() ; NI < EndNI() ; NI ++){
-        data1 = GetNDat(NI.GetId());
-        
-        for (NN=NI ; NN < EndNI() ; NN++){
-            if (NI.IsNbrNId(NN.GetId()) || NI==NN) continue;
-            data2 = GetNDat(NN.GetId());
-            diffx = data1->x - data2->x;
-            diffy = data1->y - data2->y;
-            diffz = data1->z - data2->z;
-            r = pow(diffx,2) + pow(diffy,2) + pow(diffz,2);
-            //            r = sqrt(r);
-            //            if (r==0) r = 0.00001;
-            //            sumX = exp(-r)*diffx/(r);
-            //            sumY = exp(-r)*diffy/(r);
-            //            sumZ = exp(-r)*diffz/(r);
-            sumX = diffx/(r);
-            sumY = diffy/(r);
-            sumZ = diffz/(r);
-            data1->dxR -= sumX;
-            data1->dyR -= sumY;
-            data1->dzR -= sumZ;
-            data2->dxR += sumX;
-            data2->dyR += sumY;
-            data2->dzR += sumZ;
-            
-            data1->AxR -= fabs(sumX);
-            data1->AyR -= fabs(sumY);
-            data1->AzR -= fabs(sumZ);
-            data2->AxR += fabs(sumX);
-            data2->AyR += fabs(sumY);
-            data2->AzR += fabs(sumZ);
-            
-        }
-    }
-    
-    sumX = sumY = sumZ = 0.0;
-    for (NI=BegNI(); NI<EndNI(); NI++) {
-        if ((degree = NI.GetOutDeg())){
-            data1 = GetNDat(NI.GetId());
-            
-            data1->Ax = DT*((alpha*data1->dxA - beta*data1->dxR)) / (float)degree;
-            data1->Ay = DT*((alpha*data1->dyA - beta*data1->dyR)) / (float)degree;
-            data1->Az = DT*((alpha*data1->dzA - beta*data1->dzR)) / (float)degree;
-            
-            data1->AxT = fabs(data1->Ax);
-            data1->AyT = fabs(data1->Ay);
-            data1->AzT = fabs(data1->Az);
-            
-            data1->Vx += DT*data1->Ax;
-            data1->Vy += DT*data1->Ay;
-            data1->Vz += DT*data1->Az;
-            
-            data1->x += data1->Vx*DT;
-            data1->y += data1->Vy*DT;
-            data1->z += data1->Vz*DT;
-        }
-    }
-}
-*/
-
-//int TParticleNet::RunModel(int maxIT, float minDR, bool verbose){
-//    float sumX, sumY, sumZ, r, dist;
-//    vector<TParticle>::iterator i,j;
-//    TUNGraph::TNodeI nodeIt;
-////    float oldRR, oldRR2, RR=0, oldACC, deltaOld=0.0;
-//    int steps=0;
-//    float value;
-//
-//    if (verbose) cout << " Step#   \\theta_R   \\Delta\\theta_R \n";
-//    
-//    do {
-//        
-//        for (i = Particles.begin() ; i != Particles.end(); ++i){
-//            i->dxA = 0.0;
-//            i->dyA = 0.0;
-//            i->dzA = 0.0;
-//            i->dxR = 0.0;
-//            i->dyR = 0.0;
-//            i->dzR = 0.0;
-//        }
-//        // Algorithm CORE (O(n^2))
-//        for (i = Particles.begin() ; i != Particles.end()-1; ++i){
-//            nodeIt = Network->GetNI(i->node_id);
-//            for (j = i+1 ; j != Particles.end(); ++j){
-//                r = pow(i->x - j->x,2) + pow(i->y - j->y,2) + pow(i->z - j->z,2);
-//                r = sqrt(r);
-//                if (r==0) r = 0.0001;
-//                if (nodeIt.IsNbrNId(j->node_id)) { // i and j are connected
-//                    sumX = (j->x - i->x)/r;
-//                    sumY = (j->y - i->y)/r;
-//                    sumZ = (j->z - i->z)/r;
-//                    i->dxA += sumX;
-//                    i->dyA += sumY;
-//                    i->dzA += sumZ;
-//                    j->dxA -= sumX;
-//                    j->dyA -= sumY;
-//                    j->dzA -= sumZ;
-//                }
-//                else { // otherwise -> Most of the computation time is wasted in this part (repulsion)
-//                    dist = 1.0/r;
-//                    sumX = dist*(j->x - i->x)/r;
-//                    sumY = dist*(j->y - i->y)/r;
-//                    sumZ = dist*(j->z - i->z)/r;
-//                    i->dxR += sumX;
-//                    i->dyR += sumY;
-//                    i->dzR += sumZ;
-//                    j->dxR -= sumX;
-//                    j->dyR -= sumY;
-//                    j->dzR -= sumZ;
-//                }
-//            }
-//        }
-//        
-////        oldACC = accError;
-//        oldRR2 = oldRR;
-//        oldRR = RR;
-//        RR = 0.0;
-//        for (i = Particles.begin() ; i != Particles.end(); ++i){
-//            if (i->degree != 0){
-//                sumX = ((alpha*i->dxA - beta*i->dxR)) / (float)i->degree;
-//                sumY = ((alpha*i->dyA - beta*i->dyR)) / (float)i->degree;
-//                sumZ = ((alpha*i->dzA - beta*i->dzR)) / (float)i->degree;
-//                i->x += sumX;
-//                i->y += sumY;
-//                i->z += sumZ;
-//                RR += (fabs(i->dxR) + fabs(i->dyR) + fabs(i->dzR)) / (float)i->degree;
-//            }
-//        }
-//        
-//        RR = RR*0.1 + oldRR*0.9; // used to make the evolution of RR more stable (due to the numerical integration step DT=1.0.
-//        ++steps;
-//    
-//        value = fabs(oldRR2-RR); // / (float)Particles.size();
-//        if (verbose) cout << steps << " " << RR << " " << value << endl;
-//    } while (steps<maxIT && value > minDR);
-//    return steps;
-//}
-//
-//
-//
 
 void TParticleNet::assignCentroids(){
     float dist, dist2, maxError=0.0;
@@ -1062,6 +724,10 @@ int TParticleNet::CommunityDetection3(){
         ++steps;
     } while (diffError>0.01);
     return steps;
+}
+
+float TParticleNet::printCentroidsError(){
+    return accError;
 }
 
 
@@ -1704,3 +1370,377 @@ void TParticleNet::SaveParticlePosition(const char *filename){
 //
 //    
 //}
+
+
+
+//void TParticleNet::AddNoise(){
+//    float sumX, sumY, sumZ, r;
+//    float diffx, diffy, diffz;
+//    TParticleNet::TNodeI NI, NN;
+//    TParticleNet::TEdgeI EI;
+//    PParticle data1, data2;
+//    int id1, id2, degree;
+//
+//    sumX = sumY = sumZ = 0.0;
+//    for (NI=BegNI(); NI<EndNI(); NI++) {
+//        if ((degree = NI.GetDeg())){
+//            data1 = GetNDat(NI.GetId());
+//            data1->x += DT*((alpha*data1->dxA - beta*data1->dxR)) / (float)degree;
+//            data1->y += DT*((alpha*data1->dyA - beta*data1->dyR)) / (float)degree;
+//            data1->z += DT*((alpha*data1->dzA - beta*data1->dzR)) / (float)degree;
+//            
+//            // Debug
+//            data1->dxA = (alpha*data1->dxA)/(float)degree;
+//            data1->dyA = (alpha*data1->dyA)/(float)degree;
+//            data1->dzA = (alpha*data1->dzA)/(float)degree;
+//            data1->dxR = (beta*data1->dxR)/(float)degree;
+//            data1->dyR = (beta*data1->dyR)/(float)degree;
+//            data1->dzR = (beta*data1->dzR)/(float)degree;
+//        }
+//    }
+//    
+//}
+
+/*
+void TParticleNet::RunByStepRadial(){
+    float sumX, sumY, sumZ, r;
+    float diffx, diffy, diffz;
+    TParticleNet::TNodeI NI, NN;
+    TParticleNet::TEdgeI EI;
+    PParticle data1, data2;
+    int id1, id2, degree;
+    
+    for (NI=BegNI(); NI<EndNI(); NI++) {
+        data1 = GetNDat(NI.GetId());
+        data1->dxA = 0;
+        data1->dyA = 0;
+        data1->dzA = 0;
+        data1->dxR = 0;
+        data1->dyR = 0;
+        data1->dzR = 0;
+    }
+
+
+    // Attraction
+    for (EI=BegEI() ; EI < EndEI() ; EI++){
+        id1 = EI.GetSrcNId();
+        id2 = EI.GetDstNId();
+        // Loading node's data;
+        data1 = GetNDat(id1);
+        data2 = GetNDat(id2);
+        diffx = data1->x - data2->x;
+        diffy = data1->y - data2->y;
+        diffz = data1->z - data2->z;
+        r = pow(diffx,2) + pow(diffy,2) + pow(diffz,2);
+        r = sqrt(r);
+        if (r<1.0) r = 4.0;
+        sumX = diffx/r;
+        sumY = diffy/r;
+        sumZ = diffz/r;
+        data1->dxA -= sumX;
+        data1->dyA -= sumY;
+        data1->dzA -= sumZ;
+        data2->dxA += sumX;
+        data2->dyA += sumY;
+        data2->dzA += sumZ;
+    }
+
+    float massX=0, massY=0, massZ=0;
+    for (NI=BegNI() ; NI < EndNI() ; NI ++){
+        data1 = GetNDat(NI.GetId());
+        massX += data1->x;
+        massY += data1->y;
+        massZ += data1->z;
+    }
+    massX /= 128.0;
+    massY /= 128.0;
+    massZ /= 128.0;
+    
+    //Repulsion
+    for (NI=BegNI() ; NI < EndNI() ; NI ++){
+        data1 = GetNDat(NI.GetId());
+
+        diffx = data1->x - massX;
+        diffy = data1->y - massY;
+        diffz = data1->z - massZ;
+        r = pow(diffx,2) + pow(diffy,2) + pow(diffz,2);
+        r = sqrt(r);
+
+        sumX = exp(-1.0*(r-1.0))*diffx/(r);
+        sumY = exp(-1.0*(r-1.0))*diffy/(r);
+        sumZ = exp(-1.0*(r-1.0))*diffz/(r);
+        data1->dxR += sumX;
+        data1->dyR += sumY;
+        data1->dzR += sumZ;
+//            data2->dxR += sumX;
+//            data2->dyR += sumY;
+//            data2->dzR += sumZ;
+
+    }
+    
+//    alpha = 1.0;
+//    beta = 0.2;
+    sumX = sumY = sumZ = 0.0;
+    for (NI=BegNI(); NI<EndNI(); NI++) {
+        if ((degree = NI.GetDeg())){
+            data1 = GetNDat(NI.GetId());
+            data1->x += ((alpha*data1->dxA - beta*data1->dxR)) / (float)degree;
+            data1->y += ((alpha*data1->dyA - beta*data1->dyR)) / (float)degree;
+            data1->z += ((alpha*data1->dzA - beta*data1->dzR)) / (float)degree;
+        }
+    }
+}
+
+void TParticleNet::RunByStepRadial2(){
+    float sumX, sumY, sumZ, r;
+    float diffx, diffy, diffz;
+    TParticleNet::TNodeI NI, NN;
+    TParticleNet::TEdgeI EI;
+    PParticle data1, data2;
+    int id1, id2, degree;
+    
+    for (NI=BegNI(); NI<EndNI(); NI++) {
+        data1 = GetNDat(NI.GetId());
+        data1->dxA = 0;
+        data1->dyA = 0;
+        data1->dzA = 0;
+        data1->dxR = 0;
+        data1->dyR = 0;
+        data1->dzR = 0;
+        data1->AxA = 0;
+        data1->AyA = 0;
+        data1->AzA = 0;
+        data1->AxR = 0;
+        data1->AyR = 0;
+        data1->AzR = 0;
+
+    }
+    
+    
+    // Attraction
+    for (EI=BegEI() ; EI < EndEI() ; EI++){
+        id1 = EI.GetSrcNId();
+        id2 = EI.GetDstNId();
+        // Loading node's data;
+        data1 = GetNDat(id1);
+        data2 = GetNDat(id2);
+        diffx = data1->x - data2->x;
+        diffy = data1->y - data2->y;
+        diffz = data1->z - data2->z;
+        r = pow(diffx,2) + pow(diffy,2) + pow(diffz,2);
+        r = sqrt(r);
+//        r = 1.0 / (1.0 + exp(-r));
+//        if (r==0) r = 0.00001; // to avoid division per zero when two particles are in the same position
+//        r = 1.0;
+//        sumX = diffx*r;
+//        sumY = diffy*r;
+//        sumZ = diffz*r;
+//        sumX = diffx/r;
+//        sumY = diffy/r;
+//        sumZ = diffz/r;
+        sumX = (diffx/r)*(1.0 + 0.0/r);
+        sumY = (diffy/r)*(1.0 + 0.0/r);
+        sumZ = (diffz/r)*(1.0 + 0.0/r);
+        data1->dxA -= sumX;
+        data1->dyA -= sumY;
+        data1->dzA -= sumZ;
+        data2->dxA += sumX;
+        data2->dyA += sumY;
+        data2->dzA += sumZ;
+
+        data1->AxA -= fabs(sumX);
+        data1->AyA -= fabs(sumY);
+        data1->AzA -= fabs(sumZ);
+        data2->AxA += fabs(sumX);
+        data2->AyA += fabs(sumY);
+        data2->AzA += fabs(sumZ);
+    }
+    
+    float massX=0, massY=0, massZ=0;
+    for (NI=BegNI() ; NI < EndNI() ; NI ++){
+        data1 = GetNDat(NI.GetId());
+        massX += data1->x;
+        massY += data1->y;
+        massZ += data1->z;
+    }
+    massX /= 128.0;
+    massY /= 128.0;
+    massZ /= 128.0;
+    
+    //Repulsion
+    for (NI=BegNI() ; NI < EndNI() ; NI ++){
+        data1 = GetNDat(NI.GetId());
+        
+        diffx = data1->x - massX;
+        diffy = data1->y - massY;
+        diffz = data1->z - massZ;
+        r = pow(diffx,2) + pow(diffy,2) + pow(diffz,2);
+//        r = sqrt(r);
+        sumX = diffx/(r);
+        sumY = diffy/(r);
+        sumZ = diffz/(r);
+        data1->dxR -= sumX;
+        data1->dyR -= sumY;
+        data1->dzR -= sumZ;
+        data2->dxR += sumX;
+        data2->dyR += sumY;
+        data2->dzR += sumZ;
+        
+        data1->AxR -= fabs(sumX);
+        data1->AyR -= fabs(sumY);
+        data1->AzR -= fabs(sumZ);
+        data2->AxR += fabs(sumX);
+        data2->AyR += fabs(sumY);
+        data2->AzR += fabs(sumZ);
+
+    }
+    
+    sumX = sumY = sumZ = 0.0;
+    for (NI=BegNI(); NI<EndNI(); NI++) {
+        if ((degree = NI.GetOutDeg())){
+            data1 = GetNDat(NI.GetId());
+            
+            data1->Ax = DT*((alpha*data1->dxA - beta*data1->dxR)) / (float)degree;
+            data1->Ay = DT*((alpha*data1->dyA - beta*data1->dyR)) / (float)degree;
+            data1->Az = DT*((alpha*data1->dzA - beta*data1->dzR)) / (float)degree;
+            
+            data1->AxT = fabs(data1->Ax);
+            data1->AyT = fabs(data1->Ay);
+            data1->AzT = fabs(data1->Az);
+            
+            data1->Vx += DT*data1->Ax;
+            data1->Vy += DT*data1->Ay;
+            data1->Vz += DT*data1->Az;
+
+            data1->x += data1->Vx*DT;
+            data1->y += data1->Vy*DT;
+            data1->z += data1->Vz*DT;
+        }
+    }
+}
+
+void TParticleNet::RunByStep2(){
+    float sumX, sumY, sumZ, r;
+    float diffx, diffy, diffz;
+    TParticleNet::TNodeI NI, NN;
+    TParticleNet::TEdgeI EI;
+    PParticle data1, data2;
+    int id1, id2, degree;
+    
+    for (NI=BegNI(); NI<EndNI(); NI++) {
+        data1 = GetNDat(NI.GetId());
+        data1->dxA = 0;
+        data1->dyA = 0;
+        data1->dzA = 0;
+        data1->dxR = 0;
+        data1->dyR = 0;
+        data1->dzR = 0;
+        data1->AxA = 0;
+        data1->AyA = 0;
+        data1->AzA = 0;
+        data1->AxR = 0;
+        data1->AyR = 0;
+        data1->AzR = 0;
+        
+    }
+    
+    
+    // Attraction
+    for (EI=BegEI() ; EI < EndEI() ; EI++){
+        id1 = EI.GetSrcNId();
+        id2 = EI.GetDstNId();
+        // Loading node's data;
+        data1 = GetNDat(id1);
+        data2 = GetNDat(id2);
+        diffx = data1->x - data2->x;
+        diffy = data1->y - data2->y;
+        diffz = data1->z - data2->z;
+        r = pow(diffx,2) + pow(diffy,2) + pow(diffz,2);
+        r = sqrt(r);
+        //        r = 1.0 / (1.0 + exp(-r));
+        //        if (r==0) r = 0.00001; // to avoid division per zero when two particles are in the same position
+        //        r = 1.0;
+        //        sumX = diffx*r;
+        //        sumY = diffy*r;
+        //        sumZ = diffz*r;
+        //        sumX = diffx/r;
+        //        sumY = diffy/r;
+        //        sumZ = diffz/r;
+        sumX = (diffx/r)*(1.0 + 0.0/r);
+        sumY = (diffy/r)*(1.0 + 0.0/r);
+        sumZ = (diffz/r)*(1.0 + 0.0/r);
+        data1->dxA -= sumX;
+        data1->dyA -= sumY;
+        data1->dzA -= sumZ;
+        data2->dxA += sumX;
+        data2->dyA += sumY;
+        data2->dzA += sumZ;
+        
+        data1->AxA -= fabs(sumX);
+        data1->AyA -= fabs(sumY);
+        data1->AzA -= fabs(sumZ);
+        data2->AxA += fabs(sumX);
+        data2->AyA += fabs(sumY);
+        data2->AzA += fabs(sumZ);
+    }
+    
+    // Repulsion
+    for (NI=BegNI() ; NI < EndNI() ; NI ++){
+        data1 = GetNDat(NI.GetId());
+        
+        for (NN=NI ; NN < EndNI() ; NN++){
+            if (NI.IsNbrNId(NN.GetId()) || NI==NN) continue;
+            data2 = GetNDat(NN.GetId());
+            diffx = data1->x - data2->x;
+            diffy = data1->y - data2->y;
+            diffz = data1->z - data2->z;
+            r = pow(diffx,2) + pow(diffy,2) + pow(diffz,2);
+            //            r = sqrt(r);
+            //            if (r==0) r = 0.00001;
+            //            sumX = exp(-r)*diffx/(r);
+            //            sumY = exp(-r)*diffy/(r);
+            //            sumZ = exp(-r)*diffz/(r);
+            sumX = diffx/(r);
+            sumY = diffy/(r);
+            sumZ = diffz/(r);
+            data1->dxR -= sumX;
+            data1->dyR -= sumY;
+            data1->dzR -= sumZ;
+            data2->dxR += sumX;
+            data2->dyR += sumY;
+            data2->dzR += sumZ;
+            
+            data1->AxR -= fabs(sumX);
+            data1->AyR -= fabs(sumY);
+            data1->AzR -= fabs(sumZ);
+            data2->AxR += fabs(sumX);
+            data2->AyR += fabs(sumY);
+            data2->AzR += fabs(sumZ);
+            
+        }
+    }
+    
+    sumX = sumY = sumZ = 0.0;
+    for (NI=BegNI(); NI<EndNI(); NI++) {
+        if ((degree = NI.GetOutDeg())){
+            data1 = GetNDat(NI.GetId());
+            
+            data1->Ax = DT*((alpha*data1->dxA - beta*data1->dxR)) / (float)degree;
+            data1->Ay = DT*((alpha*data1->dyA - beta*data1->dyR)) / (float)degree;
+            data1->Az = DT*((alpha*data1->dzA - beta*data1->dzR)) / (float)degree;
+            
+            data1->AxT = fabs(data1->Ax);
+            data1->AyT = fabs(data1->Ay);
+            data1->AzT = fabs(data1->Az);
+            
+            data1->Vx += DT*data1->Ax;
+            data1->Vy += DT*data1->Ay;
+            data1->Vz += DT*data1->Az;
+            
+            data1->x += data1->Vx*DT;
+            data1->y += data1->Vy*DT;
+            data1->z += data1->Vz*DT;
+        }
+    }
+}
+*/

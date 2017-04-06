@@ -1,10 +1,10 @@
 clear all;
 
-inicio = 0;
+inicio = 1;
 step = 1;
-time = 50;
+time = 66;
 s = 0; % box size
-fname = 'network';
+fname = '../../Drosofila/networks/drosophila_subset_';
 
 si = ceil(time/step)
 
@@ -22,19 +22,26 @@ Part = figure;
 Forces = figure;
 
 for i=inicio:step:time
-    nomef = sprintf('%s.time_%d.par',fname,i);
+    nomef = sprintf('%st%d.par',fname,i);
     a = load(nomef);
     [N C] = size(a);
     [i N]
-    nColors = max(a(:,2));
+    nColors = max(a(:,3))
     cores = jet(nColors);
     figure(Part);
-    for j=1:nColors
-        index = find(a(:,2)==j);
-        p = plot3(a(index,4),a(index,5),a(index,6),'.');
-        hold on;
-        set(p,'Color',cores(j,:), 'MarkerSize',30);
+    hold off;
+    if (nColors > 0) 
+        for j=1:nColors
+            index = find(a(:,3)==j);
+            p = plot3(a(index,4),a(index,5),a(index,6),'.');
+            hold on;
+            set(p,'Color',cores(j,:), 'MarkerSize',30);
+        end;
+    else
+        p = plot3(a(:,4),a(:,5),a(:,6),'.');
+        set(p,'Color',[0 0 0], 'MarkerSize',30);
     end;
+
     box on;
     hold off;
     if (s>=1)
@@ -50,14 +57,14 @@ for i=inicio:step:time
     FR = sort(a(:,C));
     
     figure(Forces);
-%     plot(DF);
-    [norm(FA) norm(FR) norm(DF)]
-    plot(FA,'b');
-    hold on;
-    plot(FR,'r');
-    box on;
-%     axis([1 N 0 1.1]);
-    hold off;
+    plot(DF);
+%     [norm(FA) norm(FR) norm(DF)]
+%     plot(FA,'b');
+%     hold on;
+%     plot(FR,'r');
+%     box on;
+% %     axis([1 N 0 1.1]);
+%     hold off;
     
     pause(1.5);
 end;
