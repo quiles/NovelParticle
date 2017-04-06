@@ -56,9 +56,11 @@ class TLink{
 public:
   bool refreshed;
   float weight;
+  int age;
 public:
-  TLink(): refreshed(true), weight(1.0){}
-  TLink(const bool& _ref, const float _wei): refreshed(_ref), weight(_wei){}
+  operator float() const {return weight;}
+  TLink(): refreshed(true), weight(1.0), age(0){}
+  TLink(const bool& _ref, const float _wei, const int _age): refreshed(_ref), weight(_wei), age(_age){}
   ~TLink() {};
   operator bool() const {return refreshed;}
   operator float() const {return weight;}
@@ -67,13 +69,10 @@ public:
 */
 
 
-class TParticle{
+class TParticle {
 public:
-//    int node_id;
-    //    TUNGraph::TNodeI node;
     int auxi;
     float x[PDIM];
-//    int degree;
     float dA[PDIM];
     float dR[PDIM];
     float Vx, Vy, Vz;
@@ -95,17 +94,23 @@ public:
     };
     ~TParticle(){
     }
-//    TParticle(const PParticle &pIn){
-//        x = pIn.x; y = pIn.y; z = pIn.z;
-//        index = pIn.index; indexReal = pIn.indexReal; cluster_id = pIn.cluster_id;
-//    }
-    TParticle(TSIn& SIn) {};
-    void Save(TSOut& SOut) const {};
     friend class TParticleNet;
 };
 
 
-class TParticleNet : public TNodeNet<TNode> {
+class TLink : public TVoid{
+public:
+    float weight;
+    int age;
+    bool refreshed;
+    TLink(): refreshed(true), weight(1.0), age(0){}
+    TLink(const bool& _ref, const float _wei, const int _age): refreshed(_ref), weight(_wei), age(_age){}
+    ~TLink() {};
+    friend class TParticleNet;
+};
+
+//class TParticleNet : public TNodeNet<TNode> {
+class TParticleNet : public TNodeEDatNet<TNode,TLink> {
 private:
     // auxiliar variables
     int i,j,k;
@@ -160,13 +165,26 @@ public:
     void RunByStep2();
     void RunByStepRadial();
     void RunByStepRadial2();
+    int RunModel(int maxIT, float minDR, bool verbose);
 
     void SaveParticlePosition(const char *filename);
     int CommunityDetection3();
     void SetModelParameters(float a, float b, float g){
         alpha=a; beta=b; gamma=g; eta=1.0;
+/*
+        TParticleNet::TEdgeI EI;
+        TLink data;
+        int id1, id2;
+        for (EI=BegEI() ; EI < EndEI() ; EI++){
+            id1 = EI.GetSrcNId();
+            id2 = EI.GetDstNId();
+            data = GetEDat(id1,id2);
+            cout << id1 << "-" << id2 << "[AGE: " << data.age << "] [Weight: " << data.weight << "]\n";
+        }
+*/
     };
     int getNumCommunities() {return Centroids.size();};
+    float printCentroidsError();
 
     void NewNode(int node_id);
     void NewLink(int i, int j);
