@@ -247,14 +247,14 @@ void TParticleNet::ReloadNetwork(const char *filename){
 
     // remove unrefreshed nodes
     for (NI=BegNI(); NI<EndNI(); NI++) {
-        cout << NI.GetDeg() << " ";
+//        cout << NI.GetDeg() << " ";
         particle = GetNDat(NI.GetId());
 	if (!particle->refreshed) {
             delete particle;
             DelNode(NI.GetId());
         }
     }
-    cout << endl;
+//    cout << endl;
 }
 
 
@@ -541,6 +541,7 @@ int TParticleNet::RunModel(int maxIT, float minDR, bool verbose){
                 r = 0;
                 for (i=0 ; i<PDIM ; i++) r += diff[i]*diff[i];
                 r = sqrt(r);
+if (r<0.001) r = 0.001;
                 for (i=0 ; i<PDIM ; i++) sum[i] = exp(-r)*diff[i]/(r);
 
                 for (i=0 ; i<PDIM ; i++) {
@@ -587,10 +588,14 @@ void TParticleNet::assignCentroids(){
     vector<TCentroid>::iterator c, c_assigned;
     TParticleNet::TNodeI NI;
     PParticle p;
+    int c_number=1;
     
+	
+
     for (c=Centroids.begin() ; c!=Centroids.end(); ++c){
         c->error = 0.0;
         c->nparticles = 0;
+        c->comm_id = c_number++;
     }
     accError = 0.0;
 

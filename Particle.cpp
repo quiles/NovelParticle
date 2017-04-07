@@ -95,12 +95,13 @@ void Message(int i){
 void ModelDynamic(){
     PParticleNet Model;
     string saveName;
-    int it, st;
+    int it, st, count;
     char out[256];
     bool firstIt=true;
     
     ifstream file (fileOfNames.c_str());
-
+//cout << "[";        
+count = 1;
     while  (file >> fName){
         if (firstIt){
             Model = TParticleNet::LoadFromFile(fName.c_str());
@@ -108,31 +109,33 @@ void ModelDynamic(){
             sprintf(out,"time_0.par");
             saveName = fName;
             saveName.replace(fName.size()-3,3,out);
-            cout << "Initial state: " << saveName << endl;
+//            cout << "Initial state: " << saveName << endl;
             Model->SaveParticlePosition(saveName.c_str());
             firstIt = false;
         }
         else {
             Model->ReloadNetwork(fName.c_str());
         }
-        cout << "Running model on: " << fName << endl;
+//        cout << "Running model on: " << fName << endl;
 
-        it = Model->RunModel(1,minDR,verbose);
+        it = Model->RunModel(steps,minDR,verbose);
 
         st = Model->CommunityDetection3();
-        cout << "Total steps: " << it << endl;
-        cout << "# of communities detected: " << Model->getNumCommunities() << endl;
-        cout << "Accumulated centroid error: " << Model->printCentroidsError() << endl;
-        
+//        cout << "Total steps: " << it << endl;
+//        cout << "# of communities detected: " << Model->getNumCommunities() << endl;
+//        cout << "Accumulated centroid error: " << Model->printCentroidsError() << endl;
+
+cout << count++ << " " << it << " " << Model->getNumCommunities() << " " << Model->printCentroidsError() << "\n";        
         saveName = fName;
         saveName.replace(fName.size()-3,3,"par");
         Model->SaveParticlePosition(saveName.c_str());
-        cout << "Current state file: " << saveName << endl;
+//        cout << "Current state file: " << saveName << endl;
         
 //        saveName.replace(fName.size()-3,3,"com");
 //        Model->SaveCommunities(saveName.c_str());
 //        cout << "Current community structure: " << saveName << endl << endl;
     }
+//cout << "]\n" << endl;
 }
 
 
