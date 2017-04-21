@@ -29,7 +29,7 @@ bool timeVarying=false;
 bool snapFormat=false;
 bool searchBeta=false;
 bool verbose=false;
-int steps=1000;
+int steps=100;
 int savestep=100;
 float minDR=0.1;
 string fName, fNameCom="";
@@ -99,6 +99,9 @@ void ModelDynamic(){
     char out[256];
     bool firstIt=true;
     
+    FILE *stream;
+    stream = fopen("output.txt", "w");
+    
     ifstream file (fileOfNames.c_str());
 //cout << "[";        
 count = 1;
@@ -109,23 +112,24 @@ count = 1;
             sprintf(out,"time_0.par");
             saveName = fName;
             saveName.replace(fName.size()-3,3,out);
-//            cout << "Initial state: " << saveName << endl;
+            cout << "Initial state: " << saveName << endl;
             Model->SaveParticlePosition(saveName.c_str());
             firstIt = false;
         }
         else {
             Model->ReloadNetwork(fName.c_str());
         }
-//        cout << "Running model on: " << fName << endl;
+        cout << "Running model on: " << fName << endl;
 
         it = Model->RunModel(steps,minDR,verbose);
 
-        st = Model->CommunityDetection3();
-//        cout << "Total steps: " << it << endl;
+        st = 0; //Model->CommunityDetection3();
+        cout << "Total steps: " << it << endl;
 //        cout << "# of communities detected: " << Model->getNumCommunities() << endl;
-//        cout << "Accumulated centroid error: " << Model->printCentroidsError() << endl;
+        cout << "Accumulated centroid error: " << Model->printCentroidsError() << endl;
 
-cout << count++ << " " << it << " " << Model->getNumCommunities() << " " << Model->printCentroidsError() << "\n";        
+        fprintf(stream,"%d %d %d %.5f\n",count++,it,Model->getNumCommunities(),Model->printCentroidsError());
+//cout << count++ << " " << it << " " << Model->getNumCommunities() << " " << Model->printCentroidsError() << "\n";
         saveName = fName;
         saveName.replace(fName.size()-3,3,"par");
         Model->SaveParticlePosition(saveName.c_str());
@@ -162,7 +166,7 @@ void ModelByStep(){
 
 //    Model->RunModel(steps, 0.1, false);
 
-    for (i=1 ; i<steps ; i++){        
+    for (i=1 ; i<steps ; i++){
         Model->RunByStep();
         if (i>=0 && i%savestep==0) {
             sprintf(out,"time_%d.par",i);
@@ -224,7 +228,7 @@ void Model0(){
     if (!fNameCom.empty()) cout << "NMI: " << Model->NMI() << endl;
     cout << "Elapsed time (s): " << ((float)(end-ini))/CLOCKS_PER_SEC << endl;
     
-    sprintf(out,"time_%d.par",i);
+    sprintf(out,"time_final.par");
     saveName = fName;
     saveName.replace(fName.size()-3,3,out);
     Model->SaveParticlePosition(saveName.c_str());
@@ -241,7 +245,7 @@ void ModelLote(){
 
     alpha = 1.0;
     beta = 0.2;
-    steps = 1000;
+    steps = 100;
     
     for (mu=0.6 ; mu<=0.81 ; mu+=0.02){
         ini = clock();
@@ -337,7 +341,6 @@ int main(int argc,char *argv[]){
             }
             else if (strcmp(argv[i],"-bs") == 0){
                 byStep = true;
-                steps = maxSteps;
             }
             //            else if (strcmp(argv[i],"-dynamic")==0){
             //                if (++i>=argc) break;

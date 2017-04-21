@@ -1,4 +1,4 @@
-/*
+    /*
  * PhaseSeparation.h
  *
  *  Created on: Set/10/2015
@@ -15,7 +15,7 @@
 #undef min
 #undef max
 
-#define PDIM 3
+#define PDIM 3 
 
 using namespace std;
 
