@@ -32,10 +32,61 @@ bool verbose=false;
 int steps=100;
 int savestep=100;
 float minDR=0.1;
-string fName, fNameCom="";
+string fName, fNameCom="", newnetwork="";
 string fileOfNames;
 int maxSteps=1000;
 bool dynamic=false;
+int dim=3;
+float epsilon;
+bool fixedcom=false;
+PParticleNet Model;
+
+
+void SaveMeasures(const char *filename){
+//    printf("nodes:%d  edges:%d\n", Graph->GetNodes(), Graph->GetEdges());
+//
+//    PUNGraph UGraph = TSnap::ConvertGraph<PParticleNet>(Model); // undirected version of the graph
+
+    TIntFltH BtwH, EigH, PRankH, CcfH, CloseH, HubH, AuthH;
+//    printf("Computing...\n");
+//    printf("Treat graph as DIRECTED: ");
+    //printf(" PageRank... ");
+    TSnap::GetPageRank(Model, PRankH, 0.85);
+    //printf(" Hubs&Authorities...");
+    TSnap::GetHits(Model, HubH, AuthH);
+//    printf("\nTreat graph as UNDIRECTED: ");
+//    printf(" Eigenvector...");           TSnap::GetEigenVectorCentr(Model, EigH);
+    //printf(" Clustering...");
+    TSnap::GetNodeClustCf(Model, CcfH);
+    //printf(" Betweenness (SLOW!)...");
+    TSnap::GetBetweennessCentr(Model, BtwH, 1.0);
+//    printf(" Constraint (SLOW!)...");    TNetConstraint<PParticleNet> NetC(Model, true);
+//    printf(" Closeness (SLOW!)...");
+
+    for (TParticleNet::TNodeI NI = Model->BegNI(); NI < Model->EndNI(); NI++) {
+        const int NId = NI.GetId();
+        CloseH.AddDat(NId, TSnap::GetClosenessCentr<PParticleNet>(Model, NId, false));
+    }
+    FILE *F = fopen(filename, "w");
+//    fprintf(F,"#Network: %s\n", InFNm.CStr());
+    fprintf(F,"%%Nodes: %d\tEdges: %d\n", Model->GetNodes(), Model->GetEdges());
+    fprintf(F,"%%NodeId\tDegree\tCloseness\tBetweennes\tClusteringCoefficient\tPageRank\tHubScore\tAuthorityScore\n");
+    for (TParticleNet::TNodeI NI = Model->BegNI(); NI < Model->EndNI(); NI++) {
+        const int NId = NI.GetId();
+        const double DegCentr = Model->GetNI(NId).GetDeg();
+        const double CloCentr = CloseH.GetDat(NId);
+        const double BtwCentr = BtwH.GetDat(NId);
+//        const double EigCentr = EigH.GetDat(NId);
+//        const double Constraint = NetC.GetNodeC(NId);
+        const double ClustCf = CcfH.GetDat(NId);
+        const double PgrCentr = PRankH.GetDat(NId);
+        const double HubCentr = HubH.GetDat(NId);
+        const double AuthCentr = AuthH.GetDat(NId);
+        fprintf(F, "%d\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n", NId,
+                DegCentr, CloCentr, BtwCentr, ClustCf, PgrCentr, HubCentr, AuthCentr);
+    }
+    fclose(F);
+}
 
 
 void Message(int i){
@@ -48,6 +99,7 @@ void Message(int i){
         cout << "\t\t-b value -> repulsive parameter (beta) [default: 0.1]\n";
         cout << "\t\t-tr value ->  define the stop condition - theta_R  [default: 1.0]\n";
         cout << "\t\t-max value ->  define the maximum number of steps (iterations)  [default: 1000]\n";
+        cout << "\t\t-dim value ->  define the dimension of the particle system [default: 3]\n";
         //        cout << "\t\t-ss number_of_steps -> save states (files.par & files.cen)\n";
         //        cout << "\t\t-sf -> load the input file using the snapFormat\n";
         cout << "\t\t-v -> verbose\n";
@@ -62,38 +114,7 @@ void Message(int i){
 
 
 
-/*
- void ModelByStep(){
- PParticleNet Model;
- Model = TParticleNet::LoadFromFile("./net_sample.dat");
- string saveName;
- char out[256];
- int it, st, i;
- //    clock_t ini,end;
- //    ini = clock();
- fName = "./net_sample.dat";
- 
- sprintf(out,"time_0.par");
- saveName = fName;
- saveName.replace(fName.size()-3,3,out);
- Model->SaveParticlePosition(saveName.c_str());
- cout << "Initial state: " << saveName << endl;
- 
- //    Model->SetModelParameters(alpha, beta, 1.0);
- cout << "Model running...\n";
- for (i=0 ; i<100 ; i++){
- Model->RunByStep();
- sprintf(out,"time_%d.par",i);
- saveName = fName;
- saveName.replace(fName.size()-3,3,out);
- //        cout << "Step: " << i << " - " << saveName.c_str() << endl;
- Model->SaveParticlePosition(saveName.c_str());
- }
- }
- */
-
 void ModelDynamic(){
-    PParticleNet Model;
     string saveName;
     int it, st, count;
     char out[256];
@@ -101,13 +122,16 @@ void ModelDynamic(){
     
     FILE *stream;
     stream = fopen("output.txt", "w");
-    
+    fprintf(stream,"%% #file #transient #communities #centroid_error\n");
+
+    steps = maxSteps;
     ifstream file (fileOfNames.c_str());
 //cout << "[";        
 count = 1;
     while  (file >> fName){
         if (firstIt){
-            Model = TParticleNet::LoadFromFile(fName.c_str());
+            Model = new TParticleNet(dim);
+            Model->LoadFromFile(fName.c_str());
             Model->SetModelParameters(alpha, beta, 1.0);
             sprintf(out,"time_0.par");
             saveName = fName;
@@ -126,13 +150,21 @@ count = 1;
         st = 0; //Model->CommunityDetection3();
         cout << "Total steps: " << it << endl;
 //        cout << "# of communities detected: " << Model->getNumCommunities() << endl;
-        cout << "Accumulated centroid error: " << Model->printCentroidsError() << endl;
+//        cout << "Accumulated centroid error: " << Model->printCentroidsError() << endl;
+        cout << "FR norm: " << Model->getNormFR() << endl;
+
 
         fprintf(stream,"%d %d %d %.5f\n",count++,it,Model->getNumCommunities(),Model->printCentroidsError());
 //cout << count++ << " " << it << " " << Model->getNumCommunities() << " " << Model->printCentroidsError() << "\n";
         saveName = fName;
         saveName.replace(fName.size()-3,3,"par");
         Model->SaveParticlePosition(saveName.c_str());
+
+        saveName = fName;
+        saveName.replace(fName.size()-3,3,"mes");
+        SaveMeasures(saveName.c_str());
+
+        
 //        cout << "Current state file: " << saveName << endl;
         
 //        saveName.replace(fName.size()-3,3,"com");
@@ -144,7 +176,6 @@ count = 1;
 
 
 void ModelByStep(){
-    PParticleNet Model;
     string saveName;
     char out[256];
     int i;
@@ -152,7 +183,9 @@ void ModelByStep(){
     
     ini = clock();
     
-    Model = TParticleNet::LoadFromFile(fName.c_str());
+    Model = new TParticleNet(dim);
+    Model->LoadFromFile(fName.c_str());
+
     if (!fNameCom.empty()) Model->LoadComFile(fNameCom.c_str());
   
     sprintf(out,"time_0.par");
@@ -174,10 +207,6 @@ void ModelByStep(){
             saveName.replace(fName.size()-3,3,out);
             cout << "Step: " << i << " - " << saveName.c_str() << endl;
             Model->SaveParticlePosition(saveName.c_str());
-//            if (!fNameCom.empty()) {
-//                Model->CommunityDetection3();
-//                cout << "NMI: " << Model->NMI() << endl;
-//            }
         }
     }
 
@@ -198,7 +227,6 @@ void ModelByStep(){
 
 
 void Model0(){
-    PParticleNet Model;
     string saveName;
     char out[256];
     int i;
@@ -206,7 +234,10 @@ void Model0(){
     
     ini = clock();
     
-    Model = TParticleNet::LoadFromFile(fName.c_str());
+    Model = new TParticleNet(dim);
+    Model->LoadFromFile(fName.c_str());
+    
+//    Model = TParticleNet::LoadFromFile(fName.c_str(),dim);
     if (!fNameCom.empty()) Model->LoadComFile(fNameCom.c_str());
   
     sprintf(out,"time_0.par");
@@ -221,12 +252,27 @@ void Model0(){
     Model->RunModel(steps, minDR, verbose);
 
     cout << "Detecting clusters...\n";
-    Model->CommunityDetection3();
+    if (fixedcom) Model->CommunityDetection(numCom);
+    else Model->CommunityDetection3();
     end = clock();
     
+    sprintf(out,"cen");
+    saveName = fName;
+    saveName.replace(fName.size()-3,3,out);
+    Model->SaveCentroids(saveName.c_str());
+    
     cout << "# of communities detected: " << Model->getNumCommunities() << endl;
+    cout << "FR norm: " << Model->getNormFR() << endl;
+
     if (!fNameCom.empty()) cout << "NMI: " << Model->NMI() << endl;
     cout << "Elapsed time (s): " << ((float)(end-ini))/CLOCKS_PER_SEC << endl;
+    
+    sprintf(out,"mes");
+    saveName = fName;
+    saveName.replace(fName.size()-3,3,out);
+    SaveMeasures(saveName.c_str());
+
+    if (!newnetwork.empty()) Model->SaveNetworkFromParticle(newnetwork.c_str(),epsilon);
     
     sprintf(out,"time_final.par");
     saveName = fName;
@@ -235,40 +281,81 @@ void Model0(){
     cout << "Final state: " << saveName << endl;    
 }
 
-
-void ModelLote(){
-    PParticleNet Model;
-    char fcom[256], fnet[256];
+void Model_graph_generate(){
+    string saveName;
+    char out[256];
     int i;
     clock_t ini,end;
-    float mu;
-
-    alpha = 1.0;
-    beta = 0.2;
-    steps = 100;
     
-    for (mu=0.6 ; mu<=0.81 ; mu+=0.02){
-        ini = clock();
-
-        sprintf(fnet,"./data1000S/net_m%.2f_r1.dat",mu);
-        sprintf(fcom,"./data1000S/com_m%.2f_r1.dat",mu);
-        cout << "File: " << fnet << endl;
-
-        Model = TParticleNet::LoadFromFile(fnet);
-        Model->LoadComFile(fcom);
-      
-        Model->SetModelParameters(alpha, beta, 1.0);
-        for (i=1 ; i<steps ; i++){
-            Model->RunByStep();
-        }
-        Model->CommunityDetection3();
-        end = clock();
-
-        cout << "# of communities detected: " << Model->getNumCommunities() << endl;
-        cout << "NMI: " << Model->NMI() << endl;
-        cout << "Elapsed time (s): " << ((float)(end-ini))/CLOCKS_PER_SEC << endl;
-    }
+    ini = clock();
+    
+    Model = new TParticleNet(dim);
+    Model->LoadFromFile(fName.c_str());
+    
+    //    Model = TParticleNet::LoadFromFile(fName.c_str(),dim);
+    if (!fNameCom.empty()) Model->LoadComFile(fNameCom.c_str());
+    
+    sprintf(out,"time_0.par");
+    saveName = fName;
+    saveName.replace(fName.size()-3,3,out);
+    Model->SaveParticlePosition(saveName.c_str());
+    cout << "Initial state: " << saveName << endl;
+    
+    Model->SetModelParameters(alpha, beta, 1.0);
+    cout << "Model running...\n";
+    
+    Model->RunModel(steps, minDR, verbose);
+    
+    cout << "Detecting clusters...\n";
+    Model->CommunityDetection3();
+    end = clock();
+    
+    cout << "# of communities detected: " << Model->getNumCommunities() << endl;
+    cout << "FR norm: " << Model->getNormFR() << endl;
+    
+    if (!fNameCom.empty()) cout << "NMI: " << Model->NMI() << endl;
+    cout << "Elapsed time (s): " << ((float)(end-ini))/CLOCKS_PER_SEC << endl;
+    
+    sprintf(out,"time_final.par");
+    saveName = fName;
+    saveName.replace(fName.size()-3,3,out);
+    Model->SaveParticlePosition(saveName.c_str());
+    cout << "Final state: " << saveName << endl;
 }
+
+//void ModelLote(){
+//    PParticleNet Model;
+//    char fcom[256], fnet[256];
+//    int i;
+//    clock_t ini,end;
+//    float mu;
+//
+//    alpha = 1.0;
+//    beta = 0.2;
+//    steps = 100;
+//    
+//    for (mu=0.6 ; mu<=0.81 ; mu+=0.02){
+//        ini = clock();
+//
+//        sprintf(fnet,"./data1000S/net_m%.2f_r1.dat",mu);
+//        sprintf(fcom,"./data1000S/com_m%.2f_r1.dat",mu);
+//        cout << "File: " << fnet << endl;
+//
+//        Model = TParticleNet::LoadFromFile(fnet,dim);
+//        Model->LoadComFile(fcom);
+//      
+//        Model->SetModelParameters(alpha, beta, 1.0);
+//        for (i=1 ; i<steps ; i++){
+//            Model->RunByStep();
+//        }
+//        Model->CommunityDetection3();
+//        end = clock();
+//
+//        cout << "# of communities detected: " << Model->getNumCommunities() << endl;
+//        cout << "NMI: " << Model->NMI() << endl;
+//        cout << "Elapsed time (s): " << ((float)(end-ini))/CLOCKS_PER_SEC << endl;
+//    }
+//}
 
 
 int main(int argc,char *argv[]){
@@ -298,10 +385,15 @@ int main(int argc,char *argv[]){
             if (strcmp(argv[i],"-c") == 0){
                 if (++i>=argc) break;
                 numCom = strtol(argv[i],NULL, 10);
+                fixedcom = true;
             }
             else if (strcmp(argv[i],"-max") == 0){
                 if (++i>=argc) break;
                 maxSteps = strtol(argv[i],NULL, 10);
+            }
+            else if (strcmp(argv[i],"-dim") == 0){
+                if (++i>=argc) break;
+                dim = strtol(argv[i],NULL, 10);
             }
             else if (strcmp(argv[i],"-tr") == 0){
                 if (++i>=argc) break;
@@ -314,6 +406,11 @@ int main(int argc,char *argv[]){
             else if (strcmp(argv[i],"-cf") == 0){
                 if (++i>=argc) break;
                 fNameCom = argv[i];
+            }
+            else if (strcmp(argv[i],"-generate") == 0){
+                if (++i>=argc) break;
+                newnetwork = argv[i++];
+                epsilon = (float)strtod(argv[i],NULL);
             }
             else if (strcmp(argv[i],"-b") == 0){
                 if (++i>=argc) break;

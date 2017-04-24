@@ -15,7 +15,7 @@
 #undef min
 #undef max
 
-#define PDIM 3 
+#define MAXDIM 10
 
 using namespace std;
 
@@ -26,7 +26,7 @@ typedef TParticle* PParticle;
 
 class TCentroid{
 public:
-    float x[PDIM];
+    float x[MAXDIM];
     float error;
     int nparticles; // store the number of associated particles
     int comm_id;
@@ -72,9 +72,10 @@ public:
 class TParticle {
 public:
     int auxi;
-    float x[PDIM];
-    float dA[PDIM];
-    float dR[PDIM];
+    int idx; // used to index an adjcency matrix
+    float x[MAXDIM];
+    float dA[MAXDIM];
+    float dR[MAXDIM];
     float Vx, Vy, Vz;
     float Ax, Ay, Az;
     float AxR, AyR, AzR;
@@ -115,8 +116,9 @@ private:
     // auxiliar variables
     int i,j,k;
     int id1, id2, degree;
-    float sum[PDIM], r;
-    float diff[PDIM];
+    float sum[MAXDIM], r;
+    float diff[MAXDIM];
+    int PDIM;
 
     float alpha; // attraction strength
     float beta; // repulsion strength
@@ -124,6 +126,7 @@ private:
     float eta; // numerical integration step (delta T), constant at 1.0
     float addCentroidThreshold;
     float mergeCentroidThreshold;
+    bool centroidsMerged;
     //    int centroidTransient;
 
     vector <TCentroid> Centroids;
@@ -138,6 +141,7 @@ private:
     bool toRemoveCentroid; // flag to remove a centroid
     int centroid2remove;
     int idCentroidMaxError; // store the id of the centroid with the largest error
+    int idCentroidMinError; // store the id of the centroid with the largest error
     float accError;
     float RR, oldRR, oldRR2;
 
@@ -145,21 +149,26 @@ private:
     void computeCentroids();
     void assignCentroids();
     void addCentroid();
+    void resetCentroid();
     void removeCentroid();
     void mergeCentroids();
+    
+    float calcDistance(float *d1, float *d2){
+        int i;
+        float res=0;
+        for (i=0 ; i<PDIM ; i++) res += (d1[i]-d2[i])*(d1[i]-d2[i]);
+        return sqrt(res);
+    };
 
 
 public:
     
-    TParticleNet();
+    TParticleNet(int dim);
     ~TParticleNet() {};
     
-    static PParticleNet LoadFromFile(const char *filename);
-    static PParticleNet LoadClique(int nc, int cs);
+    void LoadFromFile(const char *filename);
     void ReloadNetwork(const char *filename);
     void LoadComFile(const char *filename);
-    void LoadComFile(int nc);
-
 
     void RunByStep();
     void RunByStep2();
@@ -168,7 +177,13 @@ public:
     int RunModel(int maxIT, float minDR, bool verbose);
 
     void SaveParticlePosition(const char *filename);
+    void SaveCentroids(const char *filename);
+    void SaveMeasures(const char *filename);
+    void SaveNetworkFromParticle(const char *filename, float epsilon);
+
     int CommunityDetection3();
+    int CommunityDetection(int n_comm);
+
     void SetModelParameters(float a, float b, float g){
         alpha=a; beta=b; gamma=g; eta=1.0;
 /*
@@ -184,6 +199,7 @@ public:
 */
     };
     int getNumCommunities() {return Centroids.size();};
+    float getNormFR();
     float printCentroidsError();
 
     void NewNode(int node_id);

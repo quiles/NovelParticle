@@ -17,8 +17,9 @@ TNode::~ TNode(){
 
 }
 
-TParticleNet::TParticleNet(){
+TParticleNet::TParticleNet(int dim){
     TCentroid centroid;
+    PDIM = dim;
     for (i=0 ; i<PDIM ; i++) centroid.x[i] = 0;
     centroid.comm_id = 1;
     addCentroidThreshold = 0.5;
@@ -50,137 +51,57 @@ void TParticleNet::LoadComFile(const char *filename){
 
 }
 
-void TParticleNet::LoadComFile(int nc){
-//    FILE *stream;
-//    int i,j, id1;
-    numCommunities = nc;
-//    stream = fopen("cliques.com", "w");
-//    for (i=0 ; i<nc ; i++){
-//        for (j=0 ; j<cs ; j++){
-//            id1 = (i*cs)+j;
-//            fprintf(stream, "%d %d\n",id1, i);
-//        }
-//    }
-//    fclose(stream);
-}
 
-
-PParticleNet TParticleNet::LoadClique(int nc, int cs){
-    
-    PParticleNet net = new TParticleNet();
-    PParticle particle;
-    int id1, id2;
-    int i,j,k;
-
-
-    for (i=0 ; i<nc ; i++){
-        for (j=0 ; j<cs ; j++){
-            id1 = (i*cs)+j;
-            particle = new TParticle();
-            for (k=0 ; k<PDIM ; k++)  particle->x[k] = (float)(rand()%2000 - 1000) / 10000.0;
-//            particle->Vx = 0.0;
-//            particle->Vy = 0.0;
-//            particle->Vz = 0.0;
-            particle->index = NULL;
-            particle->indexReal = i+1;
-            particle->cluster_id = 0;
-            particle->refreshed = true;
-            net->AddNode(id1,particle);
-        }
-        // intra community links
-        for (j=0 ; j<cs-1 ; j++){
-            id1 = (i*cs)+j;
-            for (k=j+1 ; k<cs ; k++){
-                id2 = (i*cs)+k;
-                net->AddEdge(id1, id2);
-                net->AddEdge(id2, id1);
-            }
-        }
-    }
-
-    // inter community links
-    for (i=0 ; i<nc ; i++){
-        id1 = (i*cs);
-//        cout << "ID1 " << id1 << " : " ;
-        for (j=i+1 ; j<nc ; j++){
-            id2 = (j*cs);
-//            cout << id2 << "\t";
-            net->AddEdge(id1, id2);
-            net->AddEdge(id2, id1);
-        }
-//        cout << endl;
-    }
-    return net;
-    
-}
-
-
-
-PParticleNet TParticleNet::LoadFromFile(const char *filename){
+void TParticleNet::LoadFromFile(const char *filename){
     FILE *stream;
     stream = fopen(filename, "r+");
-    if (!stream) return NULL;
+    if (!stream) {
+        cout << "ERROR: File not found!\n";
+        return;
+    }
     int i;
     
-    PParticleNet net = new TParticleNet();
+//    PParticleNet net = new TParticleNet();
     PParticle particle;
     int id1, id2;
     int lixo;
 
-//TLink data;
-//data.weight = 1;
 
     while (fscanf(stream, "%d %d", &id1, &id2) == 2){
-//cout << "\n " << id1 << "|" << id2 << " -> ";
-        if (!net->IsNode(id1)) {
+//        cout << id1 << " - " << id2 << endl;
+//        if (!net->IsNode(id1)) {
+        if (!IsNode(id1)) {
+//            cout << "\n\nDebug\n\n";
             particle = new TParticle();
             for (i=0 ; i<PDIM ; i++) particle->x[i] = (float)(rand()%2000 - 1000) / 10000.0;
-//            particle->Vx = 0.0;
-//            particle->Vy = 0.0;
-//            particle->Vz = 0.0;
             particle->index = NULL;
             particle->indexReal = 0;
             particle->cluster_id = 0;
             particle->refreshed = true;
-            net->AddNode(id1,particle);
-//cout << id1 << " ";
+//            net->AddNode(id1,particle);
+            AddNode(id1,particle);
         }
-        if (!net->IsNode(id2)) {
+        if (!IsNode(id2)) {
+//        if (!net->IsNode(id2)) {
             particle = new TParticle();
             for (i=0 ; i<PDIM ; i++) particle->x[i] = (float)(rand()%2000 - 1000) / 10000.0;
-//            particle->Vx = 0.0;
-//            particle->Vy = 0.0;
-//            particle->Vz = 0.0;
             particle->index = NULL;
             particle->indexReal = 0;
             particle->cluster_id = 0;
             particle->refreshed = true;
-            net->AddNode(id2,particle);
-//cout << id2 << " ";
+            AddNode(id2,particle);
+//            net->AddNode(id2,particle);
         }
-        if (!net->IsEdge(id1,id2)) {
-            net->AddEdge(id1, id2);
-            net->AddEdge(id2, id1);
-//            data.weight = data.weight + 1;
-//            data.age = rand()%1000;
-//            net->SetEDat(id1,id2,data);
-//            data.weight = data.weight + 1;
-//            data.age = rand()%1000;
-//            net->SetEDat(id2,id1,data);
+        if (!IsEdge(id1,id2)) {
+//        if (!net->IsEdge(id1,id2)) {
+//            net->AddEdge(id1, id2);
+//            net->AddEdge(id2, id1);
+            AddEdge(id1, id2);
+            AddEdge(id2, id1);
         }
     }
     fclose(stream);
-
-    return net;
 }
-
-/*
-
-  for (TNodeEDatNet<TInt, TInt>::TEdgeI EI = Net->BegEI(); EI < Net->EndEI(); EI++) {
-    Net->SetEDat(EI.GetSrcNId(),EI.GetDstNId(),EI.GetSrcNId()*EI.GetDstNId());
-  }
-
-*/
 
 
 void TParticleNet::ReloadNetwork(const char *filename){
@@ -585,13 +506,13 @@ if (r<0.01) r = 0.01;
 
 
 void TParticleNet::assignCentroids(){
-    float dist, dist2, maxError=0.0;
+    float dist, dist2, maxError=0.0, minError;
     vector<TCentroid>::iterator c, c_assigned;
     TParticleNet::TNodeI NI;
     PParticle p;
     int c_number=1;
     
-	
+    minError = numeric_limits<float>::max();
 
     for (c=Centroids.begin() ; c!=Centroids.end(); ++c){
         c->error = 0.0;
@@ -625,6 +546,11 @@ void TParticleNet::assignCentroids(){
         if (dist > maxError) {
             idCentroidMaxError = c_assigned - Centroids.begin(); // Centroid's index associated to the farthest particle. When needed, the new centroid is added nearby this one.
             maxError = dist;
+        }
+        if (dist < minError){
+            idCentroidMinError = c_assigned - Centroids.begin(); // Centroid's index associated to the farthest particle. When needed, the new centroid is added nearby this one.
+            minError = dist;
+            
         }
     }
     
@@ -683,6 +609,15 @@ void TParticleNet::addCentroid(){
     toAddCentroid = false;
 }
 
+void TParticleNet::resetCentroid(){
+    float vrand;
+    for (i=0 ; i<PDIM ; i++) {
+        vrand = -0.1 + (float)(rand()%201)/1000.0;
+        Centroids[idCentroidMinError].x[i] = Centroids[idCentroidMaxError].x[i] + vrand;
+    }
+    
+}
+
 void TParticleNet::removeCentroid(){
     Centroids.erase(Centroids.begin()+centroid2remove);
     toRemoveCentroid = false;
@@ -692,6 +627,7 @@ void TParticleNet::mergeCentroids(){
     vector<TCentroid>::iterator c1,c2,c_remove;
     float min=99999, dist;
 
+    centroidsMerged = false;
     for (c1=Centroids.begin() ; c1!=(Centroids.end()-1) ; ++c1){
         for (c2=c1+1 ; c2!=(Centroids.end()) ; ++c2){
             dist = 0;
@@ -703,6 +639,7 @@ void TParticleNet::mergeCentroids(){
         }
     }
     if (sqrt(min)<0.9) {
+        centroidsMerged = true;
         Centroids.erase(c_remove);
     }
 }
@@ -731,6 +668,40 @@ int TParticleNet::CommunityDetection3(){
     } while (diffError>0.01);
     return steps;
 }
+
+int TParticleNet::CommunityDetection(int n_comm){
+    float oldAcc;
+    float diffError;
+    int steps=0;
+    TCentroid centroid;
+    int c;
+    
+    Centroids.clear();
+    nextComId=1;
+    for (c=0 ; c<n_comm ; c++){
+        cout << "DEBUG X\n";
+        for (i=0 ; i<PDIM ; i++) centroid.x[i] = -1.0 + (float)(rand()%1001) / 500.0;
+        centroid.comm_id = nextComId++;
+        Centroids.push_back(centroid);
+    }
+    
+    for (c=0 ; c<209 ; c++){
+        if (c%5 == 0) {
+            mergeCentroids();
+            assignCentroids();
+//                if (toRemoveCentroid) removeCentroid();
+            if (centroidsMerged) addCentroid();
+            assignCentroids();
+        }
+        assignCentroids();
+        computeCentroids();
+    }
+    
+    cout << "Debug #com: " << n_comm << " " << Centroids.size() << endl;
+
+    return steps;
+}
+
 
 float TParticleNet::printCentroidsError(){
     return accError;
@@ -1170,6 +1141,99 @@ float TParticleNet::NMI(){
 //
 //// fixed << setprecision(2)
 //
+
+float TParticleNet::getNormFR(){
+    TParticleNet::TNodeI NI;
+    PParticle data;
+    float DR, Total=0.0;
+    
+    for (NI=BegNI() ; NI<EndNI(); NI++){
+        data = GetNDat(NI.GetId());
+        DR = 0.0;
+        for (i=0 ; i<PDIM ; i++) {
+            DR += data->dR[i]*data->dR[i];
+        }
+        DR = sqrt(DR);
+        Total += DR*DR;
+    }
+    return sqrt(Total);
+}
+
+
+/*
+ PUNGraph UGraph = TSnap::ConvertGraph<PUNGraph>(Graph); // undirected version of the graph
+ TIntFltH BtwH, EigH, PRankH, CcfH, CloseH, HubH, AuthH;
+ //printf("Computing...\n");
+ printf("Treat graph as DIRECTED: ");
+ printf(" PageRank... ");             TSnap::GetPageRank(Graph, PRankH, 0.85);
+ printf(" Hubs&Authorities...");      TSnap::GetHits(Graph, HubH, AuthH);
+ printf("\nTreat graph as UNDIRECTED: ");
+ printf(" Eigenvector...");           TSnap::GetEigenVectorCentr(UGraph, EigH);
+ printf(" Clustering...");            TSnap::GetNodeClustCf(UGraph, CcfH);
+ printf(" Betweenness (SLOW!)...");   TSnap::GetBetweennessCentr(UGraph, BtwH, 1.0);
+ printf(" Constraint (SLOW!)...");    TNetConstraint<PUNGraph> NetC(UGraph, true);
+ printf(" Closeness (SLOW!)...");
+ for (TUNGraph::TNodeI NI = UGraph->BegNI(); NI < UGraph->EndNI(); NI++) {
+ const int NId = NI.GetId();
+ CloseH.AddDat(NId, TSnap::GetClosenessCentr<PUNGraph>(UGraph, NId, false));
+ }
+ printf("\nDONE! saving...");
+ FILE *F = fopen(OutFNm.CStr(), "wt");
+ fprintf(F,"#Network: %s\n", InFNm.CStr());
+ fprintf(F,"#Nodes: %d\tEdges: %d\n", Graph->GetNodes(), Graph->GetEdges());
+ fprintf(F,"#NodeId\tDegree\tCloseness\tBetweennes\tEigenVector\tNetworkConstraint\tClusteringCoefficient\tPageRank\tHubScore\tAuthorityScore\n");
+ for (TUNGraph::TNodeI NI = UGraph->BegNI(); NI < UGraph->EndNI(); NI++) {
+ const int NId = NI.GetId();
+ const double DegCentr = UGraph->GetNI(NId).GetDeg();
+ const double CloCentr = CloseH.GetDat(NId);
+ const double BtwCentr = BtwH.GetDat(NId);
+ const double EigCentr = EigH.GetDat(NId);
+ const double Constraint = NetC.GetNodeC(NId);
+ const double ClustCf = CcfH.GetDat(NId);
+ const double PgrCentr = PRankH.GetDat(NId);
+ const double HubCentr = HubH.GetDat(NId);
+ const double AuthCentr = AuthH.GetDat(NId);
+ fprintf(F, "%d\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n", NId,
+ DegCentr, CloCentr, BtwCentr, EigCentr, Constraint, ClustCf, PgrCentr, HubCentr, AuthCentr);
+ }
+
+ */
+
+void TParticleNet::SaveMeasures(const char *filename){
+//    ofstream file;
+//    TParticleNet::TNodeI NI;
+//    
+//    PParticleNet graph;
+//    graph = this;
+////
+////    //PUNGraph UGraph = TSnap::ConvertGraph<PUNGraph>(Graph); // undirected version of the graph
+//    TIntFltH BtwH, EigH, PRankH, CcfH, CloseH, HubH, AuthH;
+//    //printf("Computing...\n");
+////    printf("Treat graph as DIRECTED: ");
+////    printf(" PageRank... ");             TSnap::GetPageRank(Graph, PRankH, 0.85);
+////    printf(" Hubs&Authorities...");      TSnap::GetHits(Graph, HubH, AuthH);
+////    printf("\nTreat graph as UNDIRECTED: ");
+//    printf(" Eigenvector...");           TSnap::GetEigenVectorCentr(graph, EigH);
+//    printf(" Clustering...");            TSnap::GetNodeClustCf(this, CcfH);
+////    printf(" Betweenness (SLOW!)...");   TSnap::GetBetweennessCentr(UGraph, BtwH, 1.0);
+////    printf(" Constraint (SLOW!)...");    TNetConstraint<PUNGraph> NetC(UGraph, true);
+////    printf(" Closeness (SLOW!)...");
+//
+//    
+//    file.open(filename, ofstream::out);
+//    file << "% Particle's file -> a snapshot of the particle space\n";
+//    file << "% Simulation Parameters -> alpha: " << alpha << " beta: " << beta << "Particle dimension: " << PDIM << endl;
+//    file << "% node_id, ground truth community id, assigned community id, node_id, x1, x2, fa(x1), fa(x2), ..., fr(x1), fr(x2), ...\n";
+//    
+//    for (NI=BegNI() ; NI<EndNI(); NI++){
+//        
+////            file << fixed << setprecision(3) << DA << "\t" << DR << "\t";
+////            file << endl;
+//    }
+//    file.close();
+}
+
+
 void TParticleNet::SaveParticlePosition(const char *filename){
     ofstream file;
     TParticleNet::TNodeI NI;
@@ -1750,3 +1814,87 @@ void TParticleNet::RunByStep2(){
     }
 }
 */
+
+void TParticleNet::SaveCentroids(const char *filename){
+    ofstream file;
+
+    vector<TCentroid>::iterator i;
+
+    int aux;
+    for (aux=1, i=Centroids.begin() ; i!=Centroids.end(); ++i, aux++){
+        i->comm_id = aux;
+    }
+
+    file.open(filename, ofstream::out);
+    file << "% id_centroids; position; # of associated particles; total repulsion; total attraction; sum of dists " << endl;
+    for (i = Centroids.begin() ; i != Centroids.end(); ++i){
+        for (j=0 ; j<PDIM ; j++) {
+            file << i->x[j] << "\t";
+        }
+        file << (int) i->comm_id << endl;
+    }
+    //             << i->nparticles << "\t"
+    //             << i->totalR << "\t"
+    //             << i->totalA << "\t"
+    //             << i->error << endl;
+    file.close();
+}
+
+
+void TParticleNet::SaveNetworkFromParticle(const char *filename, float epsilon){
+    FILE *stream;
+    stream = fopen(filename, "w");
+    if (!stream) return;
+    int i,j,count,N;
+    int id1, id2;
+    PParticle data1, data2;
+    TParticleNet::TNodeI NI, NN;
+    int NId;
+    float Deg=0.0, value;
+    float **adjmat;
+    
+    N = GetNodes();
+    
+    adjmat = new float*[N];
+    for (i=0 ; i<N ; i++) adjmat[i] = new float[N];
+    
+    count = 0;
+    for (NI=BegNI(); NI<EndNI(); NI++) {
+        NId = NI.GetId();
+        Deg += GetNI(NId).GetDeg();
+        data1 = GetNDat(NI.GetId());
+        data1->idx = count++;
+    }
+    Deg /= (float)(2*N);
+    cout << "Original Degree: " << Deg << endl;
+    
+    
+    for (NI=BegNI() ; NI < EndNI() ; NI ++){
+        data1 = GetNDat(NI.GetId());
+        for (NN=NI ; NN < EndNI() ; NN++){
+            if (NI.IsNbrNId(NN.GetId()) || NI==NN) {
+                adjmat[data1->idx][data1->idx] = 0;
+                continue;
+            }
+            data2 = GetNDat(NN.GetId());
+            value = calcDistance(data1->x,data2->x);
+            adjmat[data1->idx][data2->idx] = value;
+            adjmat[data2->idx][data1->idx] = value;
+        }
+    }
+    
+    Deg = 0.0;
+    for (i=0 ; i<N-1 ; i++){
+        for (j=i+1 ; j<N ; j++){
+            if (adjmat[i][j] < epsilon) {
+                fprintf(stream,"%d %d\n",i+1,j+1);
+                Deg++;
+            }
+        }
+    }
+    Deg /= (float)N;
+    Deg *=2.0;
+    fclose(stream);
+    cout << "Degree: " << Deg << endl;
+}
+
