@@ -249,7 +249,7 @@ void Model0(){
     Model->SetModelParameters(alpha, beta, 1.0);
     cout << "Model running...\n";
 
-    Model->RunModel(steps, minDR, verbose);
+    Model->RunModelNumerical(maxSteps, minDR, verbose);
 
     cout << "Detecting clusters...\n";
     if (fixedcom) Model->CommunityDetection(numCom);

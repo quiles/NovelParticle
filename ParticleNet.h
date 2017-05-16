@@ -115,7 +115,8 @@ class TParticleNet : public TNodeEDatNet<TNode,TLink> {
 private:
     // auxiliar variables
     int i,j,k;
-    int id1, id2, degree;
+    int id1, id2;
+    float degree;
     float sum[MAXDIM], r;
     float diff[MAXDIM];
     int PDIM;
@@ -175,6 +176,7 @@ public:
     void RunByStepRadial();
     void RunByStepRadial2();
     int RunModel(int maxIT, float minDR, bool verbose);
+    int RunModelNumerical(int maxIT, float minDR, bool verbose);
 
     void SaveParticlePosition(const char *filename);
     void SaveCentroids(const char *filename);
