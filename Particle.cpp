@@ -119,10 +119,11 @@ void ModelDynamic(){
     int it, st, count;
     char out[256];
     bool firstIt=true;
+    int cInfo, maxInfo;
     
     FILE *stream;
     stream = fopen("output.txt", "w");
-    fprintf(stream,"%% #file #transient #communities #centroid_error\n");
+    fprintf(stream,"%% #file #transient #communities #max-com-size #infomap #centroid_error\n");
 
     steps = maxSteps;
     ifstream file (fileOfNames.c_str());
@@ -147,14 +148,23 @@ count = 1;
 
         it = Model->RunModel(steps,minDR,verbose);
 
-        st = 0; //Model->CommunityDetection3();
-        cout << "Total steps: " << it << endl;
-//        cout << "# of communities detected: " << Model->getNumCommunities() << endl;
-//        cout << "Accumulated centroid error: " << Model->printCentroidsError() << endl;
-        cout << "FR norm: " << Model->getNormFR() << endl;
+        Model->CommunityDetection3();
+        cout << "Steps: " << it << " ";
+        cout << "#Com: " << Model->getNumCommunities() << " ";
+        cout << "CE: " << Model->printCentroidsError() << " ";
+        cout << "SizeC: " << Model->sizeLargeCom() << " ";
+        cout << "FR: " << Model->getNormFR() << endl;
+
+        cInfo = Model->Infomap(maxInfo);
+
+        cout << endl << endl;
 
 
-        fprintf(stream,"%d %d %d %.5f\n",count++,it,Model->getNumCommunities(),Model->printCentroidsError());
+        fprintf(stream,"%d %d %d %d %d %.5f\n",count++,it,
+                                            Model->getNumCommunities(),
+                                            Model->sizeLargeCom(), 
+                                            cInfo, 
+                                            Model->printCentroidsError());
 //cout << count++ << " " << it << " " << Model->getNumCommunities() << " " << Model->printCentroidsError() << "\n";
         saveName = fName;
         saveName.replace(fName.size()-3,3,"par");

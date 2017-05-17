@@ -9,6 +9,7 @@
 #include <sstream>
 #include <iomanip>
 #include <algorithm>
+#include <limits>
 
 #define DT 0.01
 
@@ -601,6 +602,14 @@ if (r<0.01) r = 0.01;
 }
 
 
+int TParticleNet::sizeLargeCom(){
+    int maxSize=0;
+    vector<TCentroid>::iterator c, c_assigned;
+    for (c=Centroids.begin() ; c!=Centroids.end(); ++c){
+        if (c->nparticles > maxSize) maxSize = c->nparticles;
+    }
+    return maxSize;
+}
 
 
 void TParticleNet::assignCentroids(){
@@ -1996,3 +2005,30 @@ void TParticleNet::SaveNetworkFromParticle(const char *filename, float epsilon){
     cout << "Degree: " << Deg << endl;
 }
 
+int TParticleNet::Infomap(int &max){
+    float Q;
+    TCnComV com;
+    int i;
+    TParticleNet::TEdgeI EI;
+    int id1, id2;
+  
+    PUNGraph G = TUNGraph::New(); 
+    
+    for (EI=BegEI() ; EI < EndEI() ; EI++){    
+        id1 = EI.GetSrcNId();
+        id2 = EI.GetDstNId();
+        if (!G->IsNode(id1)) { G->AddNode(id1); }
+        if (!G->IsNode(id2)) { G->AddNode(id2); }
+        G->AddEdge(id1,id2);
+    }
+
+    Q = TSnap::Infomap(G, com);
+
+    max = 0;
+    for (i=0 ; i<com.Len() ; i++){
+        if (max < com[i].Len()) max = com[i].Len();
+    }
+    cout << "INFOMAP #com: " << com.Len() << " Max: " << max << endl;
+ 
+    return com.Len();
+}

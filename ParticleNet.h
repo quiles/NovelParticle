@@ -203,6 +203,8 @@ public:
     int getNumCommunities() {return Centroids.size();};
     float getNormFR();
     float printCentroidsError();
+    int sizeLargeCom();
+    int Infomap(int &max);
 
     void NewNode(int node_id);
     void NewLink(int i, int j);
