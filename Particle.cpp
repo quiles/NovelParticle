@@ -116,7 +116,7 @@ void Message(int i){
 
 void ModelDynamic(){
     string saveName;
-    int it, st, count;
+    int it, st, count, itc;
     char out[256];
     bool firstIt=true;
     int cInfo, maxInfo;
@@ -148,22 +148,25 @@ count = 1;
 
         it = Model->RunModel(steps,minDR,verbose);
 
-        Model->CommunityDetection3();
+        itc = Model->CommunityDetection3();
         cout << "Steps: " << it << " ";
+        cout << "StepsC: " << itc << " ";
         cout << "#Com: " << Model->getNumCommunities() << " ";
         cout << "CE: " << Model->printCentroidsError() << " ";
         cout << "SizeC: " << Model->sizeLargeCom() << " ";
         cout << "FR: " << Model->getNormFR() << endl;
 
-        cInfo = Model->Infomap(maxInfo);
+//        cInfo = Model->Infomap(maxInfo);
+        cInfo = maxInfo = 0;
 
         cout << endl << endl;
 
 
-        fprintf(stream,"%d %d %d %d %d %.5f\n",count++,it,
+        fprintf(stream,"%d %d %d %d %d %d %d %.5f\n",count++,it,itc,
                                             Model->getNumCommunities(),
                                             Model->sizeLargeCom(), 
                                             cInfo, 
+                                            maxInfo,
                                             Model->printCentroidsError());
 //cout << count++ << " " << it << " " << Model->getNumCommunities() << " " << Model->printCentroidsError() << "\n";
         saveName = fName;

@@ -754,7 +754,7 @@ void TParticleNet::mergeCentroids(){
 int TParticleNet::CommunityDetection3(){
     float oldAcc;
     float diffError;
-    int steps=0;
+    int steps=0, countDown=2000;
     
     toAddCentroid = false;
     toRemoveCentroid = false;
@@ -772,7 +772,8 @@ int TParticleNet::CommunityDetection3(){
         accError = accError*0.1 + oldAcc*0.9; // used to make the evolution of the centroid error more stable...
         diffError = fabs(oldAcc - accError); // / (float)Centroids.size();
         ++steps;
-    } while (diffError>0.01);
+        countDown--;
+    } while (diffError>0.01 && countDown);
     return steps;
 }
 
