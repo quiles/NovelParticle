@@ -116,6 +116,89 @@ void Message(int i){
 
 void ModelDynamic(){
     string saveName;
+    int it, st, count, itc, i;
+    char out[256];
+    bool firstIt=true;
+    int cInfo, maxInfo;
+    
+    FILE *stream;
+    stream = fopen("output.txt", "w");
+    fprintf(stream,"%% #file #transient #communities #max-com-size #infomap #centroid_error\n");
+
+    steps = maxSteps;
+    ifstream file (fileOfNames.c_str());
+    count = 1;
+    while  (file >> fName){
+        if (firstIt){
+            Model = new TParticleNet(dim);
+            Model->LoadFromFile(fName.c_str());
+            Model->SetModelParameters(alpha, beta, 1.0);
+            sprintf(out,"time_0.par");
+            saveName = fName;
+            saveName.replace(fName.size()-3,3,out);
+            cout << "Initial state: " << saveName << endl;
+            Model->SaveParticlePosition(saveName.c_str());
+            firstIt = false;
+        }
+        else {
+            Model->ReloadNetwork(fName.c_str());
+        }
+        cout << "Running model on: " << fName << endl;
+
+//        it = Model->RunModel(steps,minDR,verbose);
+
+        for (i=0 ; i<100 ; i++){
+            Model->RunByStep();
+            sprintf(out,"%d.par",i);
+            saveName = fName;
+            saveName.replace(fName.size()-3,3,out);
+cout << saveName << endl;
+            Model->SaveParticlePosition(saveName.c_str());
+        }
+        Model->RunByStep();
+        sprintf(out,"%d.par",i);
+        saveName = fName;
+        saveName.replace(fName.size()-3,3,out);
+cout << saveName << endl;
+        itc = Model->CommunityDetection3();
+        Model->SaveParticlePosition(saveName.c_str());
+
+
+        itc = Model->CommunityDetection3();
+        cout << "Steps: " << it << " ";
+        cout << "StepsC: " << itc << " ";
+        cout << "#Com: " << Model->getNumCommunities() << " ";
+        cout << "CE: " << Model->printCentroidsError() << " ";
+        cout << "SizeC: " << Model->sizeLargeCom() << " ";
+        cout << "FR: " << Model->getNormFR() << endl;
+
+//        cInfo = Model->Infomap(maxInfo);
+        cInfo = maxInfo = 0;
+
+        cout << endl << endl;
+
+
+        fprintf(stream,"%d %d %d %d %d %d %d %.5f\n",count++,it,itc,
+                                            Model->getNumCommunities(),
+                                            Model->sizeLargeCom(), 
+                                            cInfo, 
+                                            maxInfo,
+                                            Model->printCentroidsError());
+//        saveName = fName;
+//        saveName.replace(fName.size()-3,3,"par");
+//        Model->SaveParticlePosition(saveName.c_str());
+
+        saveName = fName;
+        saveName.replace(fName.size()-3,3,"mes");
+        SaveMeasures(saveName.c_str());        
+    }
+}
+
+
+
+/*
+void ModelDynamic(){
+    string saveName;
     int it, st, count, itc;
     char out[256];
     bool firstIt=true;
@@ -186,8 +269,7 @@ count = 1;
     }
 //cout << "]\n" << endl;
 }
-
-
+*/
 void ModelByStep(){
     string saveName;
     char out[256];
