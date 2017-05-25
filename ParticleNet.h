@@ -76,6 +76,8 @@ public:
     float x[MAXDIM];
     float dA[MAXDIM];
     float dR[MAXDIM];
+    float dAO[MAXDIM];
+    float dRO[MAXDIM];
     float Vx, Vy, Vz;
     float Ax, Ay, Az;
     float AxR, AyR, AzR;
@@ -91,7 +93,16 @@ public:
     bool refreshed; // indicates whether a node has been updated
     
 public:
-    TParticle() {
+    TParticle(int dim) {
+	int i;
+        for (i=0 ; i<dim ; i++) {
+            x[i] = (float)(rand()%2000 - 1000) / 10000.0;
+            dA[i] = dR[i] = dAO[i] = dRO[i] = 0.0;
+        }
+        index = NULL;
+        indexReal = 0;
+        cluster_id = 0;
+        refreshed = true;
     };
     ~TParticle(){
     }
@@ -179,6 +190,7 @@ public:
     int RunModelNumerical(int maxIT, float minDR, bool verbose);
 
     void SaveParticlePosition(const char *filename);
+    void SaveParticleForces(const char *filename);
     void SaveCentroids(const char *filename);
     void SaveMeasures(const char *filename);
     void SaveNetworkFromParticle(const char *filename, float epsilon);

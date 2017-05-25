@@ -145,23 +145,23 @@ void ModelDynamic(){
         }
         cout << "Running model on: " << fName << endl;
 
-//        it = Model->RunModel(steps,minDR,verbose);
+        it = Model->RunModel(steps,minDR,verbose);
 
-        for (i=0 ; i<100 ; i++){
-            Model->RunByStep();
-            sprintf(out,"%d.par",i);
-            saveName = fName;
-            saveName.replace(fName.size()-3,3,out);
-cout << saveName << endl;
-            Model->SaveParticlePosition(saveName.c_str());
-        }
-        Model->RunByStep();
-        sprintf(out,"%d.par",i);
-        saveName = fName;
-        saveName.replace(fName.size()-3,3,out);
-cout << saveName << endl;
-        itc = Model->CommunityDetection3();
-        Model->SaveParticlePosition(saveName.c_str());
+//        for (i=0 ; i<100 ; i++){
+//            Model->RunByStep();
+//            sprintf(out,"%d.par",i);
+//            saveName = fName;
+//            saveName.replace(fName.size()-3,3,out);
+//cout << saveName << endl;
+//            Model->SaveParticlePosition(saveName.c_str());
+//        }
+//        Model->RunByStep();
+//        sprintf(out,"%d.par",i);
+//        saveName = fName;
+//        saveName.replace(fName.size()-3,3,out);
+//cout << saveName << endl;
+//        itc = Model->CommunityDetection3();
+//        Model->SaveParticlePosition(saveName.c_str());
 
 
         itc = Model->CommunityDetection3();
@@ -184,13 +184,17 @@ cout << saveName << endl;
                                             cInfo, 
                                             maxInfo,
                                             Model->printCentroidsError());
-//        saveName = fName;
-//        saveName.replace(fName.size()-3,3,"par");
-//        Model->SaveParticlePosition(saveName.c_str());
+        saveName = fName;
+        saveName.replace(fName.size()-3,3,"par");
+        Model->SaveParticlePosition(saveName.c_str());
 
         saveName = fName;
-        saveName.replace(fName.size()-3,3,"mes");
-        SaveMeasures(saveName.c_str());        
+        saveName.replace(fName.size()-3,3,"for");
+        Model->SaveParticleForces(saveName.c_str());
+
+//        saveName = fName;
+//        saveName.replace(fName.size()-3,3,"mes");
+//        SaveMeasures(saveName.c_str());        
     }
 }
 

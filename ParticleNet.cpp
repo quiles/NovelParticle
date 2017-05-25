@@ -61,42 +61,20 @@ void TParticleNet::LoadFromFile(const char *filename){
         return;
     }
     int i;
-    
-//    PParticleNet net = new TParticleNet();
+
     PParticle particle;
     int id1, id2;
-    int lixo;
-
 
     while (fscanf(stream, "%d %d", &id1, &id2) == 2){
-//        cout << id1 << " - " << id2 << endl;
-//        if (!net->IsNode(id1)) {
         if (!IsNode(id1)) {
-//            cout << "\n\nDebug\n\n";
-            particle = new TParticle();
-            for (i=0 ; i<PDIM ; i++) particle->x[i] = (float)(rand()%2000 - 1000) / 10000.0;
-            particle->index = NULL;
-            particle->indexReal = 0;
-            particle->cluster_id = 0;
-            particle->refreshed = true;
-//            net->AddNode(id1,particle);
+            particle = new TParticle(PDIM);
             AddNode(id1,particle);
         }
         if (!IsNode(id2)) {
-//        if (!net->IsNode(id2)) {
-            particle = new TParticle();
-            for (i=0 ; i<PDIM ; i++) particle->x[i] = (float)(rand()%2000 - 1000) / 10000.0;
-            particle->index = NULL;
-            particle->indexReal = 0;
-            particle->cluster_id = 0;
-            particle->refreshed = true;
+            particle = new TParticle(PDIM);
             AddNode(id2,particle);
-//            net->AddNode(id2,particle);
         }
         if (!IsEdge(id1,id2)) {
-//        if (!net->IsEdge(id1,id2)) {
-//            net->AddEdge(id1, id2);
-//            net->AddEdge(id2, id1);
             AddEdge(id1, id2);
             AddEdge(id2, id1);
         }
@@ -131,12 +109,7 @@ void TParticleNet::ReloadNetwork(const char *filename){
 
     while (fscanf(stream, "%d %d", &id1, &id2) == 2){
         if (!IsNode(id1)) {
-            particle = new TParticle();
-            for (i=0 ; i<PDIM ; i++) particle->x[i] = (float)(rand()%2000 - 1000) / 10000.0;
-            particle->index = NULL;
-            particle->indexReal = 0;
-            particle->cluster_id = 0;
-            particle->refreshed = true;
+            particle = new TParticle(PDIM);
             AddNode(id1,particle);
         }
         else {
@@ -145,12 +118,7 @@ void TParticleNet::ReloadNetwork(const char *filename){
         }
 
         if (!IsNode(id2)) {
-            particle = new TParticle();
-            for (i=0 ; i<PDIM ; i++) particle->x[i] = (float)(rand()%2000 - 1000) / 10000.0;
-            particle->index = NULL;
-            particle->indexReal = 0;
-            particle->cluster_id = 0;
-            particle->refreshed = true;
+            particle = new TParticle(PDIM);
             AddNode(id2,particle);
         }
         else {
@@ -164,8 +132,6 @@ void TParticleNet::ReloadNetwork(const char *filename){
         }
     }
     fclose(stream);
-
-    
 
     // remove unrefreshed nodes
     for (NI=BegNI(); NI<EndNI(); NI++) {
@@ -184,7 +150,7 @@ void TParticleNet::NewNode(int node_id){
     PParticle particle;
     if (IsNode(node_id)) return;
 
-    particle = new TParticle();
+    particle = new TParticle(PDIM);
     for (i=0 ; i<PDIM ; i++) particle->x[i] = (float)(rand()%2000 - 1000) / 10000.0;
     particle->index = NULL;
     particle->indexReal = 0;
@@ -543,7 +509,7 @@ int TParticleNet::RunModel(int maxIT, float minDR, bool verbose){
             r = 0;
             for (i=0 ; i<PDIM ; i++) r += diff[i]*diff[i];
             r = sqrt(r);
-            if (r<1.0) r=1.0;
+//if (r<1.0) r=1.0;
             for (i=0 ; i<PDIM ; i++) sum[i] = diff[i]/r;
             for (i=0 ; i<PDIM ; i++) {
                 data1->dA[i] -= sum[i];
@@ -562,7 +528,7 @@ int TParticleNet::RunModel(int maxIT, float minDR, bool verbose){
                 r = 0;
                 for (i=0 ; i<PDIM ; i++) r += diff[i]*diff[i];
                 r = sqrt(r);
-if (r<0.01) r = 0.01;
+if (r<0.001) r = 0.001;
                 for (i=0 ; i<PDIM ; i++) sum[i] = exp(-r)*diff[i]/(r);
 
                 for (i=0 ; i<PDIM ; i++) {
@@ -591,6 +557,16 @@ if (r<0.01) r = 0.01;
 
         // end Algorithm CORE
         
+	if (steps==0) {
+            for (NI=BegNI(); NI<EndNI(); NI++) {
+                data1 = GetNDat(NI.GetId());
+                for (i=0 ; i<PDIM ; i++) {
+                    data1->dAO[i] = data1->dA[i];
+                    data1->dRO[i] = data1->dR[i];
+                }
+            }
+        }
+
         
         RR = RR*0.1 + oldRR*0.9; // used to make the evolution of RR more stable (due to the numerical integration step DT=1.0.
         ++steps;
@@ -1341,12 +1317,35 @@ void TParticleNet::SaveMeasures(const char *filename){
 //    file.close();
 }
 
+void TParticleNet::SaveParticleForces(const char *filename){
+    ofstream file;
+    TParticleNet::TNodeI NI;
+    PParticle data;
+    float DR, DA, DAO, DRO; 
+
+    file.open(filename, ofstream::out);
+    file << "% Particle's file -> a snapshot of the particle space\n";
+    file << "% Simulation Parameters -> alpha: " << alpha << " beta: " << beta << "Particle dimension: " << PDIM << endl;
+//    file << "% node_id, ground truth community id, assigned community id, node_id, x1, x2, fa(x1), fa(x2), ..., fr(x1), fr(x2), ...\n";
+
+    for (NI=BegNI() ; NI<EndNI(); NI++){
+        data = GetNDat(NI.GetId());
+        
+        for (i=0 ; i<PDIM ; i++) file << fixed << setprecision(3) << data->dA[i] << "\t";
+        for (i=0 ; i<PDIM ; i++) file << fixed << setprecision(3) << data->dAO[i] << "\t";
+        for (i=0 ; i<PDIM ; i++) file << fixed << setprecision(3) << data->dR[i] << "\t";
+        for (i=0 ; i<PDIM ; i++) file << fixed << setprecision(3) << data->dRO[i] << "\t";
+        file << endl;
+    }
+    file.close();
+}
+
 
 void TParticleNet::SaveParticlePosition(const char *filename){
     ofstream file;
     TParticleNet::TNodeI NI;
     PParticle data;
-    float DR, DA; 
+    float DR, DA, DAO, DRO; 
 
     file.open(filename, ofstream::out);
     file << "% Particle's file -> a snapshot of the particle space\n";
@@ -1360,32 +1359,29 @@ void TParticleNet::SaveParticlePosition(const char *filename){
             file << fixed << setprecision(2) << NI.GetId() << "\t " 
                                              << data->indexReal << "\t" 
                                              << data->index->comm_id << "\t";
-            for (i=0 ; i<PDIM ; i++)  file << fixed << setprecision(2) << data->x[i] << "\t";
-            DA = DR = 0.0;
-            for (i=0 ; i<PDIM ; i++) {
-                DA += data->dA[i]*data->dA[i];
-                DR += data->dR[i]*data->dR[i];
-            }
-            DA = sqrt(DA);
-            DR = sqrt(DR);
-            file << fixed << setprecision(3) << DA << "\t" << DR << "\t";
-            file << endl;
         }
         else {
             file << fixed << setprecision(2) << NI.GetId() << "\t " 
                                              << data->indexReal << "\t" 
                                              << "-1" << "\t";
-            for (i=0 ; i<PDIM ; i++)  file << fixed << setprecision(2) << data->x[i] << "\t";
-            DA = DR = 0.0;
-            for (i=0 ; i<PDIM ; i++) {
-                DA += data->dA[i]*data->dA[i];
-                DR += data->dR[i]*data->dR[i];
-            }
-            DA = sqrt(DA);
-            DR = sqrt(DR);
-            file << fixed << setprecision(3) << DA << "\t" << DR;
-            file << endl;
         }
+        for (i=0 ; i<PDIM ; i++)  file << fixed << setprecision(2) << data->x[i] << "\t";
+        DA = DR = DAO = DRO = 0.0;
+        for (i=0 ; i<PDIM ; i++) {
+                DA += pow(data->dA[i],4);
+                DR += pow(data->dR[i],4);
+                DAO += pow(data->dAO[i],4);
+                DRO += pow(data->dRO[i],4);
+//                DA += data->dA[i]*data->dA[i];
+//                DR += data->dR[i]*data->dR[i];
+//                DAO += data->dAO[i]*data->dAO[i];
+//                DRO += data->dRO[i]*data->dRO[i];
+        }
+        DA = pow(DA,0.25);
+        DR = pow(DR,0.25);
+        DAO = pow(DAO,0.25);
+        DRO = pow(DRO,0.25);
+        file << fixed << setprecision(3) << DA << "\t" << DR << "\t" << DAO << "\t" << DRO << endl;
     }
     file.close();
 }
