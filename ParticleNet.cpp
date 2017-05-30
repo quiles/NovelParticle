@@ -557,7 +557,7 @@ if (r<0.001) r = 0.001;
 
         // end Algorithm CORE
         
-	if (steps==0) {
+	if (steps==1) {
             for (NI=BegNI(); NI<EndNI(); NI++) {
                 data1 = GetNDat(NI.GetId());
                 for (i=0 ; i<PDIM ; i++) {
@@ -1325,7 +1325,7 @@ void TParticleNet::SaveParticleForces(const char *filename){
 
     file.open(filename, ofstream::out);
     file << "% Particle's file -> a snapshot of the particle space\n";
-    file << "% Simulation Parameters -> alpha: " << alpha << " beta: " << beta << "Particle dimension: " << PDIM << endl;
+    file << "% Simulation Parameters -> alpha: " << alpha << " beta: " << beta << " Particle dimension: " << PDIM << endl;
 //    file << "% node_id, ground truth community id, assigned community id, node_id, x1, x2, fa(x1), fa(x2), ..., fr(x1), fr(x2), ...\n";
 
     for (NI=BegNI() ; NI<EndNI(); NI++){
@@ -1349,7 +1349,7 @@ void TParticleNet::SaveParticlePosition(const char *filename){
 
     file.open(filename, ofstream::out);
     file << "% Particle's file -> a snapshot of the particle space\n";
-    file << "% Simulation Parameters -> alpha: " << alpha << " beta: " << beta << "Particle dimension: " << PDIM << endl;
+    file << "% Simulation Parameters -> alpha: " << alpha << " beta: " << beta << " Particle dimension: " << PDIM << endl;
     file << "% node_id, ground truth community id, assigned community id, node_id, x1, x2, fa(x1), fa(x2), ..., fr(x1), fr(x2), ...\n";
 
     for (NI=BegNI() ; NI<EndNI(); NI++){
@@ -1368,19 +1368,19 @@ void TParticleNet::SaveParticlePosition(const char *filename){
         for (i=0 ; i<PDIM ; i++)  file << fixed << setprecision(2) << data->x[i] << "\t";
         DA = DR = DAO = DRO = 0.0;
         for (i=0 ; i<PDIM ; i++) {
-                DA += pow(data->dA[i],4);
-                DR += pow(data->dR[i],4);
-                DAO += pow(data->dAO[i],4);
-                DRO += pow(data->dRO[i],4);
+                DA += pow(data->dA[i],2);
+                DR += pow(data->dR[i],2);
+                DAO += pow(data->dAO[i],2);
+                DRO += pow(data->dRO[i],2);
 //                DA += data->dA[i]*data->dA[i];
 //                DR += data->dR[i]*data->dR[i];
 //                DAO += data->dAO[i]*data->dAO[i];
 //                DRO += data->dRO[i]*data->dRO[i];
         }
-        DA = pow(DA,0.25);
-        DR = pow(DR,0.25);
-        DAO = pow(DAO,0.25);
-        DRO = pow(DRO,0.25);
+        DA = sqrt(DA);
+        DR = sqrt(DR);
+        DAO = sqrt(DAO);
+        DRO = sqrt(DRO);
         file << fixed << setprecision(3) << DA << "\t" << DR << "\t" << DAO << "\t" << DRO << endl;
     }
     file.close();
