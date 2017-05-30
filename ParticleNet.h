@@ -83,6 +83,7 @@ public:
     float AxR, AyR, AzR;
     float AxA, AyA, AzA;
     float AxT, AyT, AzT;
+    float DistF, DistI;
 
     
     //	float erro;
@@ -187,6 +188,8 @@ public:
     void RunByStepRadial();
     void RunByStepRadial2();
     int RunModel(int maxIT, float minDR, bool verbose);
+    int RunModel2(int maxIT, float minDR, bool verbose);
+
     int RunModelNumerical(int maxIT, float minDR, bool verbose);
 
     void SaveParticlePosition(const char *filename);

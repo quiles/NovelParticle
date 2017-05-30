@@ -483,6 +483,7 @@ int TParticleNet::RunModel(int maxIT, float minDR, bool verbose){
     PParticle data1, data2;
     int steps=0;
     float value;
+    float dg1, dg2;
 
     if (verbose) cout << " Step#   \\theta_R   \\Delta\\theta_R \n";
     
@@ -490,13 +491,14 @@ int TParticleNet::RunModel(int maxIT, float minDR, bool verbose){
         
         for (NI=BegNI(); NI<EndNI(); NI++) {
             data1 = GetNDat(NI.GetId());
+            data1->DistF = 0;
             for (i=0 ; i<PDIM ; i++) {
                 data1->dA[i] = 0;
                 data1->dR[i] = 0;
             }
         }
 
-        // Algorithm CORE (O(n^2))
+// Algorithm CORE (O(n^2))
 
         // Attraction
         for (EI=BegEI() ; EI < EndEI() ; EI++){
@@ -505,10 +507,13 @@ int TParticleNet::RunModel(int maxIT, float minDR, bool verbose){
             // Loading node's data;
             data1 = GetNDat(id1);
             data2 = GetNDat(id2);
+
             for (i=0 ; i<PDIM ; i++) diff[i] = data1->x[i] - data2->x[i];
             r = 0;
             for (i=0 ; i<PDIM ; i++) r += diff[i]*diff[i];
             r = sqrt(r);
+//            data1->DistF += r;
+//            data2->DistF += r;
 //if (r<1.0) r=1.0;
             for (i=0 ; i<PDIM ; i++) sum[i] = diff[i]/r;
             for (i=0 ; i<PDIM ; i++) {
@@ -516,7 +521,6 @@ int TParticleNet::RunModel(int maxIT, float minDR, bool verbose){
                 data2->dA[i] += sum[i];
             }
         }
-
     
         // repulsion
         for (NI=BegNI() ; NI < EndNI() ; NI ++){
@@ -542,9 +546,12 @@ if (r<0.001) r = 0.001;
         oldRR = RR;
         RR = 0.0;
 	float tempR;
+//        float Lixo1=0;
         for (NI=BegNI(); NI<EndNI(); NI++) {
             if ((degree = NI.GetDeg())){
-                data1 = GetNDat(NI.GetId());            
+                data1 = GetNDat(NI.GetId());     
+                data1->DistF /= degree;
+//                Lixo1 += data1->DistF;
                 tempR = 0;
                 for (i=0 ; i<PDIM ; i++) {
                     data1->x[i] += ((alpha*data1->dA[i] - beta*data1->dR[i]))/degree;
@@ -553,13 +560,15 @@ if (r<0.001) r = 0.001;
                 RR += tempR/degree;
             }
         }
+//        cout << "Dist Att: " << Lixo1 << endl;
 
 
-        // end Algorithm CORE
+// end Algorithm CORE
         
-	if (steps==1) {
+	if (steps==0) {
             for (NI=BegNI(); NI<EndNI(); NI++) {
                 data1 = GetNDat(NI.GetId());
+                data1->DistI = data1->DistF;
                 for (i=0 ; i<PDIM ; i++) {
                     data1->dAO[i] = data1->dA[i];
                     data1->dRO[i] = data1->dR[i];
@@ -568,7 +577,7 @@ if (r<0.001) r = 0.001;
         }
 
         
-        RR = RR*0.1 + oldRR*0.9; // used to make the evolution of RR more stable (due to the numerical integration step DT=1.0.
+        RR = RR*0.1 + oldRR*0.9; // used to make the evolution of RR more stable (due to the coarse numerical integration step DT=1.0).
         ++steps;
     
         value = fabs(oldRR2-RR); // / (float)Particles.size();
@@ -577,6 +586,114 @@ if (r<0.001) r = 0.001;
     return steps;
 }
 
+int TParticleNet::RunModel2(int maxIT, float minDR, bool verbose){
+    TParticleNet::TNodeI NI, NN;
+    TParticleNet::TEdgeI EI;
+    PParticle data1, data2;
+    int steps=0;
+    float value;
+    float dg1, dg2;
+
+    if (verbose) cout << " Step#   \\theta_R   \\Delta\\theta_R \n";
+    
+    do {
+        
+        for (NI=BegNI(); NI<EndNI(); NI++) {
+            data1 = GetNDat(NI.GetId());
+            data1->DistF = 0;
+            for (i=0 ; i<PDIM ; i++) {
+                data1->dA[i] = 0;
+                data1->dR[i] = 0;
+            }
+        }
+
+// Algorithm CORE (O(n^2))
+
+        // Attraction
+        for (EI=BegEI() ; EI < EndEI() ; EI++){
+            id1 = EI.GetSrcNId();
+            id2 = EI.GetDstNId();
+            // Loading node's data;
+            data1 = GetNDat(id1);
+            data2 = GetNDat(id2);
+
+            for (i=0 ; i<PDIM ; i++) diff[i] = data1->x[i] - data2->x[i];
+            r = 0;
+            for (i=0 ; i<PDIM ; i++) r += diff[i]*diff[i];
+            r = sqrt(r);
+            data1->DistF += r;
+            data2->DistF += r;
+//if (r<1.0) r=1.0;
+            for (i=0 ; i<PDIM ; i++) sum[i] = diff[i]/r;
+            for (i=0 ; i<PDIM ; i++) {
+                data1->dA[i] -= sum[i];
+                data2->dA[i] += sum[i];
+            }
+        }
+    
+        // repulsion
+        for (NI=BegNI() ; NI < EndNI() ; NI ++){
+            data1 = GetNDat(NI.GetId());
+            for (NN=NI ; NN < EndNI() ; NN++){
+                if (NI.IsNbrNId(NN.GetId()) || NI==NN) continue;
+                data2 = GetNDat(NN.GetId());         
+                for (i=0 ; i<PDIM ; i++) diff[i] = data1->x[i] - data2->x[i];
+                r = 0;
+                for (i=0 ; i<PDIM ; i++) r += diff[i]*diff[i];
+                r = sqrt(r);
+if (r<0.001) r = 0.001;
+                for (i=0 ; i<PDIM ; i++) sum[i] = exp(-r)*diff[i]/(r);
+
+                for (i=0 ; i<PDIM ; i++) {
+                    data1->dR[i] -= sum[i];
+                    data2->dR[i] += sum[i];
+                }
+            }
+        }
+        
+        oldRR2 = oldRR;
+        oldRR = RR;
+        RR = 0.0;
+	float tempR;
+        float Lixo1=0;
+        for (NI=BegNI(); NI<EndNI(); NI++) {
+            if ((degree = NI.GetDeg())){
+                data1 = GetNDat(NI.GetId());     
+                data1->DistF /= degree;
+                Lixo1 += data1->DistF;
+                tempR = 0;
+                for (i=0 ; i<PDIM ; i++) {
+                    data1->x[i] += ((alpha*data1->dA[i] - beta*data1->dR[i]))/degree;
+                    tempR += fabs(data1->dA[i]);
+                }
+                RR += tempR/degree;
+            }
+        }
+        cout << "Dist Att: " << Lixo1 << endl;
+
+
+// end Algorithm CORE
+        
+	if (steps==0) {
+            for (NI=BegNI(); NI<EndNI(); NI++) {
+                data1 = GetNDat(NI.GetId());
+                data1->DistI = data1->DistF;
+                for (i=0 ; i<PDIM ; i++) {
+                    data1->dAO[i] = data1->dA[i];
+                    data1->dRO[i] = data1->dR[i];
+                }
+            }
+        }
+
+        
+        RR = RR*0.1 + oldRR*0.9; // used to make the evolution of RR more stable (due to the coarse numerical integration step DT=1.0).
+        ++steps;
+    
+        value = fabs(oldRR2-RR); // / (float)Particles.size();
+        if (verbose) cout << steps << " " << RR << " " << value << endl;
+    } while (steps<maxIT && value > minDR);
+    return steps;
+}
 
 int TParticleNet::sizeLargeCom(){
     int maxSize=0;
@@ -1326,16 +1443,23 @@ void TParticleNet::SaveParticleForces(const char *filename){
     file.open(filename, ofstream::out);
     file << "% Particle's file -> a snapshot of the particle space\n";
     file << "% Simulation Parameters -> alpha: " << alpha << " beta: " << beta << " Particle dimension: " << PDIM << endl;
-//    file << "% node_id, ground truth community id, assigned community id, node_id, x1, x2, fa(x1), fa(x2), ..., fr(x1), fr(x2), ...\n";
+    file << "% node_id, degree, dist(t=0), dist(t=inf), Atraction (t=0), Atraction (t=inf), Repulsion (t=0), Repulsion (t=inf)\n";
 
     for (NI=BegNI() ; NI<EndNI(); NI++){
         data = GetNDat(NI.GetId());
         
-        for (i=0 ; i<PDIM ; i++) file << fixed << setprecision(3) << data->dA[i] << "\t";
-        for (i=0 ; i<PDIM ; i++) file << fixed << setprecision(3) << data->dAO[i] << "\t";
-        for (i=0 ; i<PDIM ; i++) file << fixed << setprecision(3) << data->dR[i] << "\t";
-        for (i=0 ; i<PDIM ; i++) file << fixed << setprecision(3) << data->dRO[i] << "\t";
-        file << endl;
+        file << fixed << setprecision(3) << NI.GetId() << "\t" << NI.GetDeg() << "\t" << data->DistI << "\t" << data->DistF << "\t";
+
+	DA = DR = DAO = DRO = 0.0;        
+	for (i=0 ; i<PDIM ; i++) {
+            DA += pow(data->dA[i],2.0);
+            DR += pow(data->dR[i],2.0);
+            DAO += pow(data->dAO[i],2.0);
+            DRO += pow(data->dRO[i],2.0);
+        }
+
+	file << fixed << setprecision(3) << sqrt(DAO) << "\t" << sqrt(DA)  << "\t" << sqrt(DRO)  << "\t" << sqrt(DR) << endl;
+
     }
     file.close();
 }
@@ -1350,7 +1474,7 @@ void TParticleNet::SaveParticlePosition(const char *filename){
     file.open(filename, ofstream::out);
     file << "% Particle's file -> a snapshot of the particle space\n";
     file << "% Simulation Parameters -> alpha: " << alpha << " beta: " << beta << " Particle dimension: " << PDIM << endl;
-    file << "% node_id, ground truth community id, assigned community id, node_id, x1, x2, fa(x1), fa(x2), ..., fr(x1), fr(x2), ...\n";
+    file << "% node_id, ground truth community id, assigned community id, x1, x2, ..., x_dim\n";
 
     for (NI=BegNI() ; NI<EndNI(); NI++){
         data = GetNDat(NI.GetId());
@@ -1365,23 +1489,7 @@ void TParticleNet::SaveParticlePosition(const char *filename){
                                              << data->indexReal << "\t" 
                                              << "-1" << "\t";
         }
-        for (i=0 ; i<PDIM ; i++)  file << fixed << setprecision(2) << data->x[i] << "\t";
-        DA = DR = DAO = DRO = 0.0;
-        for (i=0 ; i<PDIM ; i++) {
-                DA += pow(data->dA[i],2);
-                DR += pow(data->dR[i],2);
-                DAO += pow(data->dAO[i],2);
-                DRO += pow(data->dRO[i],2);
-//                DA += data->dA[i]*data->dA[i];
-//                DR += data->dR[i]*data->dR[i];
-//                DAO += data->dAO[i]*data->dAO[i];
-//                DRO += data->dRO[i]*data->dRO[i];
-        }
-        DA = sqrt(DA);
-        DR = sqrt(DR);
-        DAO = sqrt(DAO);
-        DRO = sqrt(DRO);
-        file << fixed << setprecision(3) << DA << "\t" << DR << "\t" << DAO << "\t" << DRO << endl;
+        for (i=0 ; i<PDIM ; i++)  file << fixed << setprecision(2) << data->x[i] << "\n";
     }
     file.close();
 }
