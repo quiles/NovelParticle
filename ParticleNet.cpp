@@ -512,8 +512,8 @@ int TParticleNet::RunModel(int maxIT, float minDR, bool verbose){
             r = 0;
             for (i=0 ; i<PDIM ; i++) r += diff[i]*diff[i];
             r = sqrt(r);
-//            data1->DistF += r;
-//            data2->DistF += r;
+            data1->DistF += r;
+            data2->DistF += r;
 //if (r<1.0) r=1.0;
             for (i=0 ; i<PDIM ; i++) sum[i] = diff[i]/r;
             for (i=0 ; i<PDIM ; i++) {
@@ -550,7 +550,7 @@ if (r<0.001) r = 0.001;
         for (NI=BegNI(); NI<EndNI(); NI++) {
             if ((degree = NI.GetDeg())){
                 data1 = GetNDat(NI.GetId());     
-                data1->DistF /= degree;
+//                data1->DistF /= degree;
 //                Lixo1 += data1->DistF;
                 tempR = 0;
                 for (i=0 ; i<PDIM ; i++) {
@@ -1489,7 +1489,8 @@ void TParticleNet::SaveParticlePosition(const char *filename){
                                              << data->indexReal << "\t" 
                                              << "-1" << "\t";
         }
-        for (i=0 ; i<PDIM ; i++)  file << fixed << setprecision(2) << data->x[i] << "\n";
+        for (i=0 ; i<PDIM ; i++)  file << fixed << setprecision(2) << data->x[i] << "\t";
+        file << "\n";
     }
     file.close();
 }
