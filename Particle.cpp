@@ -13,6 +13,8 @@
 #include <time.h>
 #include <string>
 #include <stdlib.h>
+#include "Functions.h"
+
 
 using namespace std;
 
@@ -35,7 +37,7 @@ float minDR=0.1;
 string fName, fNameCom="", newnetwork="";
 string fileOfNames;
 int maxSteps=1000;
-bool dynamic=false;
+bool dynamic=false, gen=false;
 int dim=3;
 float epsilon;
 bool fixedcom=false;
@@ -380,47 +382,6 @@ void Model0(){
     cout << "Final state: " << saveName << endl;    
 }
 
-void Model_graph_generate(){
-    string saveName;
-    char out[256];
-    int i;
-    clock_t ini,end;
-    
-    ini = clock();
-    
-    Model = new TParticleNet(dim);
-    Model->LoadFromFile(fName.c_str());
-    
-    //    Model = TParticleNet::LoadFromFile(fName.c_str(),dim);
-    if (!fNameCom.empty()) Model->LoadComFile(fNameCom.c_str());
-    
-    sprintf(out,"time_0.par");
-    saveName = fName;
-    saveName.replace(fName.size()-3,3,out);
-    Model->SaveParticlePosition(saveName.c_str());
-    cout << "Initial state: " << saveName << endl;
-    
-    Model->SetModelParameters(alpha, beta, 1.0);
-    cout << "Model running...\n";
-    
-    Model->RunModel(steps, minDR, verbose);
-    
-    cout << "Detecting clusters...\n";
-    Model->CommunityDetection3();
-    end = clock();
-    
-    cout << "# of communities detected: " << Model->getNumCommunities() << endl;
-    cout << "FR norm: " << Model->getNormFR() << endl;
-    
-    if (!fNameCom.empty()) cout << "NMI: " << Model->NMI() << endl;
-    cout << "Elapsed time (s): " << ((float)(end-ini))/CLOCKS_PER_SEC << endl;
-    
-    sprintf(out,"time_final.par");
-    saveName = fName;
-    saveName.replace(fName.size()-3,3,out);
-    Model->SaveParticlePosition(saveName.c_str());
-    cout << "Final state: " << saveName << endl;
-}
 
 //void ModelLote(){
 //    PParticleNet Model;
@@ -461,7 +422,11 @@ int main(int argc,char *argv[]){
     int i=0;
     srand (time(NULL));
     bool byStep=false;
-
+    float k_eps;
+    bool mst=false;
+    int opt_gen;
+    
+    
 //    ModelLote(); return 0;
     
     if (argc <= 1) Message(0);
@@ -473,6 +438,13 @@ int main(int argc,char *argv[]){
             fclose(stream);
             fileOfNames = argv[2];
             dynamic=true;
+        }
+        else if (strcmp(argv[1],"-generate")==0){
+            stream = fopen(argv[2], "r");
+            if (!stream){ Message(1); return 0;}
+            fclose(stream);
+            fileOfNames = argv[2];
+            gen = true;
         }
         else {
             stream = fopen(argv[1], "r");
@@ -505,11 +477,6 @@ int main(int argc,char *argv[]){
             else if (strcmp(argv[i],"-cf") == 0){
                 if (++i>=argc) break;
                 fNameCom = argv[i];
-            }
-            else if (strcmp(argv[i],"-generate") == 0){
-                if (++i>=argc) break;
-                newnetwork = argv[i++];
-                epsilon = (float)strtod(argv[i],NULL);
             }
             else if (strcmp(argv[i],"-b") == 0){
                 if (++i>=argc) break;
@@ -553,11 +520,25 @@ int main(int argc,char *argv[]){
                 if (++i>=argc) break;
                 betaS = (float) strtod(argv[i],NULL);
             }
+            else if (strcmp(argv[i],"-eps") == 0){
+                if (++i>=argc) break;
+                k_eps = (float)strtod(argv[i],NULL);
+                opt_gen = 1;
+            }
+            else if (strcmp(argv[i],"-knn") == 0){
+                if (++i>=argc) break;
+                k_eps = strtol(argv[i],NULL, 10);
+                opt_gen = 2;
+            }
+            else if (strcmp(argv[i],"-mst") == 0){
+                mst = true;
+            }
         }
 
         if (byStep) ModelByStep();
 //        else if (searchBeta) ModelSearchBeta();
         else if (dynamic) ModelDynamic();
+        else if (gen) GenerateNetworks(fileOfNames.c_str(), opt_gen, k_eps, mst);
         else Model0();
     }
 
