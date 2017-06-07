@@ -566,6 +566,7 @@ if (r<0.001) r = 0.001;
 // end Algorithm CORE
         
 	if (steps==0) {
+//        cout << "DEGREE\n\n\n";
             for (NI=BegNI(); NI<EndNI(); NI++) {
                 data1 = GetNDat(NI.GetId());
                 data1->DistI = data1->DistF;
@@ -573,7 +574,9 @@ if (r<0.001) r = 0.001;
                     data1->dAO[i] = data1->dA[i];
                     data1->dRO[i] = data1->dR[i];
                 }
+//                cout << NI.GetDeg() << " ";
             }
+//        cout << "END DEGREE\n\n\n";
         }
 
         
@@ -847,7 +850,7 @@ void TParticleNet::mergeCentroids(){
 int TParticleNet::CommunityDetection3(){
     float oldAcc;
     float diffError;
-    int steps=0, countDown=2000;
+    int steps=0, countDown=5000;
     
     toAddCentroid = false;
     toRemoveCentroid = false;
@@ -1449,17 +1452,17 @@ void TParticleNet::SaveParticleForces(const char *filename){
         data = GetNDat(NI.GetId());
         
         file << fixed << setprecision(3) << NI.GetId() << "\t" << NI.GetDeg() << "\t" << data->DistI << "\t" << data->DistF << "\t";
-
-	DA = DR = DAO = DRO = 0.0;        
-	for (i=0 ; i<PDIM ; i++) {
+        
+        DA = DR = DAO = DRO = 0.0;
+        for (i=0 ; i<PDIM ; i++) {
             DA += pow(data->dA[i],2.0);
             DR += pow(data->dR[i],2.0);
             DAO += pow(data->dAO[i],2.0);
             DRO += pow(data->dRO[i],2.0);
         }
-
-	file << fixed << setprecision(3) << sqrt(DAO) << "\t" << sqrt(DA)  << "\t" << sqrt(DRO)  << "\t" << sqrt(DR) << endl;
-
+        
+        file << fixed << setprecision(3) << sqrt(DAO) << "\t" << sqrt(DA)  << "\t" << sqrt(DRO)  << "\t" << sqrt(DR) << endl;
+        
     }
     file.close();
 }
@@ -1474,19 +1477,21 @@ void TParticleNet::SaveParticlePosition(const char *filename){
     file.open(filename, ofstream::out);
     file << "% Particle's file -> a snapshot of the particle space\n";
     file << "% Simulation Parameters -> alpha: " << alpha << " beta: " << beta << " Particle dimension: " << PDIM << endl;
-    file << "% node_id, ground truth community id, assigned community id, x1, x2, ..., x_dim\n";
+    file << "% node_id, node degree, ground truth community id, assigned community id, x1, x2, ..., x_dim\n";
 
     for (NI=BegNI() ; NI<EndNI(); NI++){
         data = GetNDat(NI.GetId());
         
         if (data->index) {
-            file << fixed << setprecision(2) << NI.GetId() << "\t " 
+            file << fixed << setprecision(2) << NI.GetId() << "\t "
+//                                             << NI.GetDeg() << "\t"
                                              << data->indexReal << "\t" 
                                              << data->index->comm_id << "\t";
         }
         else {
             file << fixed << setprecision(2) << NI.GetId() << "\t " 
-                                             << data->indexReal << "\t" 
+//                                             << NI.GetDeg() << "\t"
+                                             << data->indexReal << "\t"
                                              << "-1" << "\t";
         }
         for (i=0 ; i<PDIM ; i++)  file << fixed << setprecision(2) << data->x[i] << "\t";
