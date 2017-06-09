@@ -9,7 +9,7 @@
 
 using namespace std;
 
-void MaxSTree(float **&matF, bool **&mat, int N);
+void MaxSTree(float ***matF, bool ***mat, int N);
 
 
 void NetworkFromMatrix_E(const char *input, const char *output, float epsilon, bool MST){
@@ -18,6 +18,7 @@ void NetworkFromMatrix_E(const char *input, const char *output, float epsilon, b
     bool **mat;
     float **matF;
     float value;
+    float degree=0.0;
     
     if ((stIn = fopen(input,"r")) && (stOut = fopen(output,"w")) ) {
         fscanf(stIn,"%d", &N);
@@ -36,7 +37,7 @@ void NetworkFromMatrix_E(const char *input, const char *output, float epsilon, b
         }
         fclose(stIn);
         
-        if (MST) MaxSTree(matF, mat, N);
+        if (MST) MaxSTree(&matF, &mat, N);
         
         for (i=0 ; i<N-1 ; i++){
             for (j=i+1 ; j<N ; j++){
@@ -46,10 +47,15 @@ void NetworkFromMatrix_E(const char *input, const char *output, float epsilon, b
         
         for (i=0 ; i<N-1 ; i++){
             for (j=i+1 ; j<N ; j++){
-                if (mat[j][i]) fprintf(stOut,"%d %d\n",i+1,j+1);
+                if (mat[j][i]) {
+                    fprintf(stOut,"%d %d\n",i+1,j+1);
+                    degree++;
+                }
             }
         }
         fclose(stOut);
+        
+        printf("Degree: %.2f\n", degree*2.0 / (float)N);
         
         for (i=0 ; i<N ; i++) {
             delete[] matF[i];
@@ -67,6 +73,8 @@ void NetworkFromMatrix_K(const char *input, const char *output, int K, bool MST)
     bool **mat;
     float **matF;
     float value;
+    float degree=0.0;
+
     
     if ((stIn = fopen(input,"r")) && (stOut = fopen(output,"w")) ) {
         fscanf(stIn,"%d", &N);
@@ -85,7 +93,7 @@ void NetworkFromMatrix_K(const char *input, const char *output, int K, bool MST)
         }
         fclose(stIn);
         
-        if (MST) MaxSTree(matF, mat, N);
+        if (MST) MaxSTree(&matF, &mat, N);
 
         float max;
         int pmax;
@@ -107,10 +115,16 @@ void NetworkFromMatrix_K(const char *input, const char *output, int K, bool MST)
         
         for (i=0 ; i<N-1 ; i++){
             for (j=i+1 ; j<N ; j++){
-                if (mat[j][i]) fprintf(stOut,"%d %d\n",i+1,j+1);
+                if (mat[j][i]) {
+                    fprintf(stOut,"%d %d\n",i+1,j+1);
+                    degree++;
+                }
             }
         }
         fclose(stOut);
+
+        printf("Degree: %.2f\n", degree*2.0 / (float)N);
+
         
         for (i=0 ; i<N ; i++) {
             delete[] matF[i];
@@ -121,49 +135,67 @@ void NetworkFromMatrix_K(const char *input, const char *output, int K, bool MST)
     }
 }
 
-void MaxSTree(float **&matF, bool **&mat, int N){
-    int nodes[N], nnodes;
+void MaxSTree(float ***matF, bool ***mat, int N){
+    int *nodes, nnodes;
     int i,pi,pj,j, pmax, tmp;
     float max;
+    bool *connect;
     
     nnodes = N;
-    for (i=0 ; i<N ; i++) nodes[i] = i;
-    
+    connect = new bool[N];
+    nodes = new int[N];
+    for (i=0 ; i<N ; i++) {
+        nodes[i] = i;
+        connect[i] = false;
+    }
+
+
     for (i=0 ; i<N-1 ; i++){
         pi = nodes[i];
         pmax = i+1;
         pj = nodes[i+1];
-        if (pi>pj) max = matF[pi][pj];
-        else max = matF[pj][pi];
+        if (pi>pj) max = (*matF)[pi][pj];
+        else max = (*matF)[pj][pi];
 //        printf("[%d] -> ",i+1);
+
         for (j=i+2 ; j<N ; j++){
             pj = nodes[j];
 
             if (pj>pi){
 //                printf("%d(%f) ",j+1,matF[pj][pi]);
-                if (max < matF[pj][pi]){
-                    max = matF[pj][pi];
+                if (max < (*matF)[pj][pi]){
+                    max = (*matF)[pj][pi];
                     pmax = j;
                 }
             } else {
 //                printf("%d(%f) ",j+1,matF[pi][pj]);
-                if (max < matF[pi][pj]){
-                    max = matF[pi][pj];
+                if (max < (*matF)[pi][pj]){
+                    max = (*matF)[pi][pj];
                     pmax = j;
                 }
             }
         }
+
 //        printf("[%d]\n",pmax);
-        tmp = nodes[i+1];
-        nodes[i+1] = nodes[pmax];
-        nodes[pmax] = tmp;
+        if (max > 0) {
+            connect[i] = true;
+            tmp = nodes[i+1];
+            nodes[i+1] = nodes[pmax];
+            nodes[pmax] = tmp;
+        }
     }
     for (i=0 ; i<N-1 ; i++){
+        if (!connect[i]) continue;
         pi = nodes[i];
         pj = nodes[i+1];
-        mat[pj][pi] = true;
+        if (pj>pi) (*mat)[pj][pi] = true;
+        else (*mat)[pi][pj] = true;
 //        printf("%d -> %d\n",pi+1,pj+1);
     }
+    
+
+    delete[] nodes;
+    delete[] connect;
 }
 
 void GenerateNetworks(const char *source, int opt, float ke, bool mst){
