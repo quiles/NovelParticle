@@ -708,6 +708,14 @@ int TParticleNet::sizeLargeCom(){
 }
 
 
+
+void TParticleNet::CommunityDetection1(float epsilon){
+
+}
+
+
+
+
 void TParticleNet::assignCentroids(){
     float dist, dist2, maxError=0.0, minError;
     vector<TCentroid>::iterator c, c_assigned;
@@ -1651,7 +1659,7 @@ void TParticleNet::SaveParticlePosition(const char *filename){
 ////    for (i=Particles.begin() ; i!=Particles.end(); ++i){
 ////        cout << "Particle: " << i->cluster_id << endl;
 ////    }
-//    for (i=Particles.begin() ; i!=Particles.end(); ++i){
+//    for (i=Particles.begreset clockin() ; i!=Particles.end(); ++i){
 //        if (i->cluster_id == -1) i->cluster_id = 0;
 //    }
 //
