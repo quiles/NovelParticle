@@ -314,6 +314,8 @@ void ModelByStep(){
     cout << "Detecting clusters...\n";
     Model->CommunityDetection3();
     end = clock();
+
+    Model->CommunityDetectionDB(0.5);
     
     cout << "# of communities detected: " << Model->getNumCommunities() << endl;
     if (!fNameCom.empty()) cout << "NMI: " << Model->NMI() << endl;

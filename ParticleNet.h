@@ -21,8 +21,12 @@ using namespace std;
 
 class TParticleNet;
 class TParticle;
+class TLink;
+class TLinkData;
+
 typedef TPt<TParticleNet> PParticleNet;
 typedef TParticle* PParticle;
+typedef TLinkData* PLinkData;
 
 class TCentroid{
 public:
@@ -51,24 +55,6 @@ public:
 
 };
 
-/*
-class TLink{
-public:
-  bool refreshed;
-  float weight;
-  int age;
-public:
-  operator float() const {return weight;}
-  TLink(): refreshed(true), weight(1.0), age(0){}
-  TLink(const bool& _ref, const float _wei, const int _age): refreshed(_ref), weight(_wei), age(_age){}
-  ~TLink() {};
-  operator bool() const {return refreshed;}
-  operator float() const {return weight;}
-  void Save(TSOut& SOut) const {}
-};
-*/
-
-
 class TParticle {
 public:
     int auxi;
@@ -84,6 +70,11 @@ public:
     float AxA, AyA, AzA;
     float AxT, AyT, AzT;
     float DistF, DistI;
+    float ComCentrality; 
+// DBSCAN
+    bool visited;
+    int neighbours;
+    int cluster_db;
 
     
     //	float erro;
@@ -113,14 +104,32 @@ public:
 
 class TLink : public TVoid{
 public:
+  PLinkData Val;
+public:
+
+   TLink(): Val(NULL){}
+   TLink(const PLinkData _Val): Val(_Val){};
+   ~TLink() {};
+   operator PLinkData() const {return Val;}
+//  void Save(TSOut& SOut) const {}
+   friend class TParticleNet;
+};
+
+
+class TLinkData{
+public:
     float weight;
+    float distance;
     int age;
     bool refreshed;
-    TLink(): refreshed(true), weight(1.0), age(0){}
-    TLink(const bool& _ref, const float _wei, const int _age): refreshed(_ref), weight(_wei), age(_age){}
-    ~TLink() {};
+    TLinkData(): refreshed(true), weight(1.0), age(0), distance(0.0){}
+    TLinkData(const bool& _ref, const float _wei, const int _age, const float _dist): refreshed(_ref), weight(_wei), age(_age), distance(_dist){}
+    ~TLinkData() {};
     friend class TParticleNet;
 };
+
+
+
 
 //class TParticleNet : public TNodeNet<TNode> {
 class TParticleNet : public TNodeEDatNet<TNode,TLink> {
@@ -145,6 +154,7 @@ private:
     vector <TCentroid> Centroids;
 
     int nextComId;
+    int nextComDBId;
     int numCommunities;
     vector<int> numCommunitiesH;
     int numClusters;
@@ -200,6 +210,8 @@ public:
 
     int CommunityDetection3();
     int CommunityDetection(int n_comm);
+    void CommunityDetectionDB(float epsilon);
+
 
     void SetModelParameters(float a, float b, float g){
         alpha=a; beta=b; gamma=g; eta=1.0;

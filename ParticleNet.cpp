@@ -63,6 +63,7 @@ void TParticleNet::LoadFromFile(const char *filename){
     int i;
 
     PParticle particle;
+    PLinkData linkD;
     int id1, id2;
 
     while (fscanf(stream, "%d %d", &id1, &id2) == 2){
@@ -75,8 +76,9 @@ void TParticleNet::LoadFromFile(const char *filename){
             AddNode(id2,particle);
         }
         if (!IsEdge(id1,id2)) {
-            AddEdge(id1, id2);
-            AddEdge(id2, id1);
+            linkD = new TLinkData();
+            if (id1<id2) AddEdge(id1, id2, linkD);
+            else AddEdge(id2, id1, linkD);
         }
     }
     fclose(stream);
@@ -90,8 +92,15 @@ void TParticleNet::ReloadNetwork(const char *filename){
 
     int id1, id2;
     PParticle particle;
+
+
+// Inserir dados das arestas ao atualizar o grafo
+// Verificar a condicao de remocao dos dados das arestas e nos da rede
+
+    PLinkData linkD;
     TParticleNet::TNodeI NI;
     TParticleNet::TEdgeI EI;
+    int idt;
 
     
     for (NI=BegNI(); NI<EndNI(); NI++) {
@@ -102,8 +111,10 @@ void TParticleNet::ReloadNetwork(const char *filename){
     for (EI=BegEI() ; EI < EndEI() ; EI++){
         id1 = EI.GetSrcNId();
         id2 = EI.GetDstNId();
-        DelEdge(id1,id2,false);
-        DelEdge(id2,id1,false);
+        linkD = GetEDat(id1,id2);
+        linkD->refreshed = false;
+//        DelEdge(id1,id2,false);
+//        DelEdge(id2,id1,false);
     }
     
 
@@ -126,12 +137,35 @@ void TParticleNet::ReloadNetwork(const char *filename){
             particle->refreshed = true;
         }
 
+        if (id1>id2) {
+            idt = id1;
+            id1 = id2;
+            id2 = idt;
+        }
+
         if (!IsEdge(id1,id2)) {
-            AddEdge(id1, id2);
-            AddEdge(id2, id1);  
+            linkD = new TLinkData();
+            linkD->refreshed = true;
+            AddEdge(id1, id2, linkD);
+//            AddEdge(id2, id1, linkD);  
+        }
+        else {
+            linkD = GetEDat(id1,id2);
+            linkD->refreshed = true;
         }
     }
     fclose(stream);
+
+    // remove unrefreshed links
+    for (EI=BegEI() ; EI < EndEI() ; EI++){
+        id1 = EI.GetSrcNId();
+        id2 = EI.GetDstNId();
+        linkD = GetEDat(id1,id2);
+	delete linkD;
+        DelEdge(id1,id2,false);
+//        DelEdge(id2,id1,false);
+    }
+
 
     // remove unrefreshed nodes
     for (NI=BegNI(); NI<EndNI(); NI++) {
@@ -147,6 +181,7 @@ void TParticleNet::ReloadNetwork(const char *filename){
 
 
 void TParticleNet::NewNode(int node_id){
+/*
     PParticle particle;
     if (IsNode(node_id)) return;
 
@@ -156,29 +191,42 @@ void TParticleNet::NewNode(int node_id){
     particle->indexReal = 0;
     particle->cluster_id = 0;
     AddNode(node_id,particle);
+*/
 }
 
 void TParticleNet::NewLink(int i, int j){
+/*
     if (IsNode(i) && IsNode(j))
        if (!IsEdge(i,j)) {
            AddEdge(i,j);
-           AddEdge(j,i);
+//           AddEdge(j,i);
        }
+*/
 }
 
 void TParticleNet::DeleteNode(int node_id){
+/*
     PParticle particle;
     if (IsNode(node_id)) {
         particle = GetNDat(node_id);
         delete particle;
         DelNode(node_id);
     }
+*/
 }
 
 void TParticleNet::DeleteLink(int i, int j){
+/*
+    PLinkData link;
     if (IsNode(i) && IsNode(j)){
-       if (IsEdge(i,j)) DelEdge(i,j,false);
+       if (IsEdge(i,j)) {
+           link = GetEDat(i,j);
+           delete link;
+           DelEdge(i,j,false);
+           DelEdge(j,i,false);
+       }
     }
+*/
 }
 
 
@@ -315,9 +363,11 @@ void TParticleNet::RunByStep(){
     TParticleNet::TNodeI NI, NN;
     TParticleNet::TEdgeI EI;
     PParticle data1, data2;
+    PLinkData linkD;
     
     for (NI=BegNI(); NI<EndNI(); NI++) {
         data1 = GetNDat(NI.GetId());
+        data1->ComCentrality = 0.0;
         for (i=0 ; i<PDIM ; i++) {
             data1->dA[i] = 0;
             data1->dR[i] = 0;
@@ -335,8 +385,17 @@ void TParticleNet::RunByStep(){
         for (i=0 ; i<PDIM ; i++) diff[i] = data1->x[i] - data2->x[i];
         r = 0;
         for (i=0 ; i<PDIM ; i++) r += diff[i]*diff[i];
+
+        data1->ComCentrality += r; //pow(r,2.0);
+        data2->ComCentrality += r; //pow(r,2.0);
+
         r = sqrt(r);
+
+        linkD = GetEDat(id1,id2);
+        linkD->distance = r;
+
         if (r<1.0) r=1.0;
+
         for (i=0 ; i<PDIM ; i++) sum[i] = diff[i]/r;
         for (i=0 ; i<PDIM ; i++) {
             data1->dA[i] -= sum[i];
@@ -709,7 +768,79 @@ int TParticleNet::sizeLargeCom(){
 
 
 
-void TParticleNet::CommunityDetection1(float epsilon){
+void TParticleNet::CommunityDetectionDB(float epsilon){
+    TParticleNet::TNodeI NI, NU;
+    PParticle data1,data2;
+    PLinkData linkD;
+    int id1, id2;
+    vector<int> neighbours;
+
+    nextComDBId = 0;
+
+    for (NI=BegNI(); NI<EndNI(); NI++) {
+        data1 = GetNDat(NI.GetId());
+        data1->visited = false;
+        data1->cluster_db = 0;
+        data1->neighbours = 0;
+    }
+   
+    for (NI=BegNI(); NI<EndNI(); NI++) {
+        id1 = NI.GetId();
+        data1 = GetNDat(id1);
+        if (data1->visited) continue;
+        data1->visited = true;
+        for (i=0 ; i<NI.GetOutDeg() ; i++){
+            id2 = NI.GetOutNId(i);
+            data2 = GetNDat(id2);
+            if (data2->visited) continue;
+            if (id2 < id1) linkD = GetEDat(id2,id1);
+            else linkD = GetEDat(id1,id2);
+            if (linkD->distance < epsilon) neighbours.push_back(id2);
+        }
+        for (i=0 ; i<NI.GetInDeg() ; i++){
+            id2 = NI.GetInNId(i);
+            data2 = GetNDat(id2);
+            if (data2->visited) continue;
+            if (id2 < id1) linkD = GetEDat(id2,id1);
+            else linkD = GetEDat(id1,id2);
+            if (linkD->distance < epsilon) neighbours.push_back(id2);
+        }
+        if (neighbours.size() > 2) {
+            data1->cluster_db = ++nextComDBId;
+nextComDBId++;
+            while (!neighbours.empty()){
+                id1 = neighbours.back();
+                neighbours.pop_back();
+                data1 = GetNDat(id1);
+                data1->visited = true;
+                data1->cluster_db = nextComDBId;
+                NU = GetNI(id1);
+
+                for (i=0 ; i<NU.GetOutDeg() ; i++){
+                    id2 = NU.GetOutNId(i);
+                    data2 = GetNDat(id2);
+                    if (data2->visited) continue;
+                    if (id2 < id1) linkD = GetEDat(id2,id1);
+                    else linkD = GetEDat(id1,id2);
+                    if (linkD->distance < epsilon) neighbours.push_back(id2);
+                }
+                for (i=0 ; i<NU.GetInDeg() ; i++){
+                    id2 = NU.GetInNId(i);
+                    data2 = GetNDat(id2);
+                    if (data2->visited) continue;
+                    if (id2 < id1) linkD = GetEDat(id2,id1);
+                    else linkD = GetEDat(id1,id2);
+                    if (linkD->distance < epsilon) neighbours.push_back(id2);
+                }
+            }
+        }
+        else neighbours.clear();
+    }
+    for (NI=BegNI(); NI<EndNI(); NI++) {
+        data1 = GetNDat(NI.GetId());
+        cout << "Node: " << NI.GetId() << " Cluster: " << data1->cluster_db << endl;
+    }
+
 
 }
 
@@ -1485,22 +1616,26 @@ void TParticleNet::SaveParticlePosition(const char *filename){
     file.open(filename, ofstream::out);
     file << "% Particle's file -> a snapshot of the particle space\n";
     file << "% Simulation Parameters -> alpha: " << alpha << " beta: " << beta << " Particle dimension: " << PDIM << endl;
-    file << "% node_id, node degree, ground truth community id, assigned community id, x1, x2, ..., x_dim\n";
+    file << "% node_id, node degree, centrality, ground truth community id, assigned com id1, assigned com dbscan x1, x2, ..., x_dim\n";
 
     for (NI=BegNI() ; NI<EndNI(); NI++){
         data = GetNDat(NI.GetId());
         
         if (data->index) {
             file << fixed << setprecision(2) << NI.GetId() << "\t "
-//                                             << NI.GetDeg() << "\t"
+                                             << NI.GetDeg() << "\t"
+                                             << data->ComCentrality << "\t"
                                              << data->indexReal << "\t" 
-                                             << data->index->comm_id << "\t";
+                                             << data->index->comm_id << "\t"
+                                             << data->cluster_db << "\t";
         }
         else {
             file << fixed << setprecision(2) << NI.GetId() << "\t " 
-//                                             << NI.GetDeg() << "\t"
+                                             << NI.GetDeg() << "\t"
+                                             << data->ComCentrality << "\t"
                                              << data->indexReal << "\t"
-                                             << "-1" << "\t";
+                                             << "-1" << "\t"
+                                             << data->cluster_db << "\t";
         }
         for (i=0 ; i<PDIM ; i++)  file << fixed << setprecision(2) << data->x[i] << "\t";
         file << "\n";
