@@ -174,8 +174,8 @@ void ModelDynamic(){
         cout << "SizeC: " << Model->sizeLargeCom() << " ";
         cout << "FR: " << Model->getNormFR() << endl;
 
-//        cInfo = Model->Infomap(maxInfo);
-        cInfo = maxInfo = 0;
+        cInfo = Model->Infomap(maxInfo);
+//        cInfo = maxInfo = 0;
 
         cout << endl << endl;
 
@@ -198,9 +198,9 @@ void ModelDynamic(){
         saveName.replace(fName.size()-3,3,"for");
         Model->SaveParticleForces(saveName.c_str());
 
-//        saveName = fName;
-//        saveName.replace(fName.size()-3,3,"mes");
-//        SaveMeasures(saveName.c_str());        
+        saveName = fName;
+        saveName.replace(fName.size()-3,3,"mes");
+        SaveMeasures(saveName.c_str());        
     }
 }
 

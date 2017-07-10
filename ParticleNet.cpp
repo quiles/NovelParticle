@@ -159,8 +159,9 @@ void TParticleNet::ReloadNetwork(const char *filename){
         id1 = EI.GetSrcNId();
         id2 = EI.GetDstNId();
         linkD = GetEDat(id1,id2);
-        if (!linkD->refreshed) linkD->age--;
-        if (linkD->age) continue;
+        if (linkD->refreshed) continue;
+//        if (!linkD->refreshed) linkD->age--;
+//        if (linkD->age) continue;
 	delete linkD;
         DelEdge(id1,id2,false);
         DelEdge(id2,id1,false);
