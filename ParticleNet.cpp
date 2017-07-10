@@ -405,7 +405,7 @@ void TParticleNet::RunByStep(){
 
     
     // repulsion
-    for (NI=BegNI() ; NI < EndNI() ; NI ++){
+    for (NI=BegNI() ; NI < EndNI() ; NI++){
         data1 = GetNDat(NI.GetId());
         for (NN=NI ; NN < EndNI() ; NN++){
             if (NI.IsNbrNId(NN.GetId()) || NI==NN) continue;
@@ -807,7 +807,6 @@ void TParticleNet::CommunityDetectionDB(float epsilon){
         }
         if (neighbours.size() > 2) {
             data1->cluster_db = ++nextComDBId;
-nextComDBId++;
             while (!neighbours.empty()){
                 id1 = neighbours.back();
                 neighbours.pop_back();
@@ -836,8 +835,43 @@ nextComDBId++;
         }
         else neighbours.clear();
     }
+    int idMin;
+    float minDist;
     for (NI=BegNI(); NI<EndNI(); NI++) {
-        data1 = GetNDat(NI.GetId());
+        id1 = NI.GetId();
+        data1 = GetNDat(id1);
+        if (data1->cluster_db == 0){
+            minDist = 9999999;
+            idMin = -1;
+            for (i=0 ; i<NI.GetOutDeg() ; i++){
+                id2 = NI.GetOutNId(i);
+                data2 = GetNDat(id2);
+                if (!data2->cluster_db) continue;
+                if (id2 < id1) linkD = GetEDat(id2,id1);
+                else linkD = GetEDat(id1,id2);
+                if (linkD->distance < minDist) {
+                    minDist = linkD->distance;
+                    idMin = id2;
+                }
+            }
+            for (i=0 ; i<NI.GetInDeg() ; i++){
+                id2 = NI.GetInNId(i);
+                data2 = GetNDat(id2);
+                if (!data2->cluster_db) continue;
+                if (id2 < id1) linkD = GetEDat(id2,id1);
+                else linkD = GetEDat(id1,id2);
+                if (linkD->distance < minDist) {
+                    minDist = linkD->distance;
+                    idMin = id2;
+                }
+            }
+            if (idMin != -1) {
+                data2 = GetNDat(idMin);
+//                data1->cluster_db = 999;
+                data1->cluster_db = data2->cluster_db;
+            }
+            
+        }
         cout << "Node: " << NI.GetId() << " Cluster: " << data1->cluster_db << endl;
     }
 
