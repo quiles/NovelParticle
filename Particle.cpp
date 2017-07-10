@@ -180,12 +180,16 @@ void ModelDynamic(){
         cout << endl << endl;
 
 
-        fprintf(stream,"%d %d %d %d %d %d %d %.5f\n",count++,it,itc,
+        fprintf(stream,"%d %d %d %d %d %d %d %.5f %.2f\n",
+                                            count++,
+                                            it,
+                                            itc,
                                             Model->getNumCommunities(),
                                             Model->sizeLargeCom(), 
                                             cInfo, 
                                             maxInfo,
-                                            Model->printCentroidsError());
+                                            Model->printCentroidsError(),
+                                            Model->getNormFR());
         saveName = fName;
         saveName.replace(fName.size()-3,3,"par");
         Model->SaveParticlePosition(saveName.c_str());

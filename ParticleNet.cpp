@@ -12,6 +12,7 @@
 #include <limits>
 
 #define DT 0.01
+#define AGE 2
 
 
 TNode::~ TNode(){
@@ -77,8 +78,11 @@ void TParticleNet::LoadFromFile(const char *filename){
         }
         if (!IsEdge(id1,id2)) {
             linkD = new TLinkData();
-            if (id1<id2) AddEdge(id1, id2, linkD);
-            else AddEdge(id2, id1, linkD);
+            linkD->age = AGE;
+            AddEdge(id1, id2, linkD);
+            AddEdge(id2, id1, linkD);
+//            if (id1<id2) AddEdge(id1, id2, linkD);
+//            else AddEdge(id2, id1, linkD);
         }
     }
     fclose(stream);
@@ -113,8 +117,6 @@ void TParticleNet::ReloadNetwork(const char *filename){
         id2 = EI.GetDstNId();
         linkD = GetEDat(id1,id2);
         linkD->refreshed = false;
-//        DelEdge(id1,id2,false);
-//        DelEdge(id2,id1,false);
     }
     
 
@@ -137,21 +139,17 @@ void TParticleNet::ReloadNetwork(const char *filename){
             particle->refreshed = true;
         }
 
-        if (id1>id2) {
-            idt = id1;
-            id1 = id2;
-            id2 = idt;
-        }
-
         if (!IsEdge(id1,id2)) {
             linkD = new TLinkData();
             linkD->refreshed = true;
+            linkD->age = AGE;
             AddEdge(id1, id2, linkD);
-//            AddEdge(id2, id1, linkD);  
+            AddEdge(id2, id1, linkD);  
         }
         else {
             linkD = GetEDat(id1,id2);
             linkD->refreshed = true;
+            linkD->age = AGE;
         }
     }
     fclose(stream);
@@ -161,9 +159,11 @@ void TParticleNet::ReloadNetwork(const char *filename){
         id1 = EI.GetSrcNId();
         id2 = EI.GetDstNId();
         linkD = GetEDat(id1,id2);
+        if (!linkD->refreshed) linkD->age--;
+        if (linkD->age) continue;
 	delete linkD;
         DelEdge(id1,id2,false);
-//        DelEdge(id2,id1,false);
+        DelEdge(id2,id1,false);
     }
 
 
@@ -789,20 +789,11 @@ void TParticleNet::CommunityDetectionDB(float epsilon){
         data1 = GetNDat(id1);
         if (data1->visited) continue;
         data1->visited = true;
-        for (i=0 ; i<NI.GetOutDeg() ; i++){
+        for (i=0 ; i<NI.GetDeg() ; i++){
             id2 = NI.GetOutNId(i);
             data2 = GetNDat(id2);
             if (data2->visited) continue;
-            if (id2 < id1) linkD = GetEDat(id2,id1);
-            else linkD = GetEDat(id1,id2);
-            if (linkD->distance < epsilon) neighbours.push_back(id2);
-        }
-        for (i=0 ; i<NI.GetInDeg() ; i++){
-            id2 = NI.GetInNId(i);
-            data2 = GetNDat(id2);
-            if (data2->visited) continue;
-            if (id2 < id1) linkD = GetEDat(id2,id1);
-            else linkD = GetEDat(id1,id2);
+            linkD = GetEDat(id1,id2);
             if (linkD->distance < epsilon) neighbours.push_back(id2);
         }
         if (neighbours.size() > 2) {
@@ -815,20 +806,11 @@ void TParticleNet::CommunityDetectionDB(float epsilon){
                 data1->cluster_db = nextComDBId;
                 NU = GetNI(id1);
 
-                for (i=0 ; i<NU.GetOutDeg() ; i++){
+                for (i=0 ; i<NU.GetDeg() ; i++){
                     id2 = NU.GetOutNId(i);
                     data2 = GetNDat(id2);
                     if (data2->visited) continue;
-                    if (id2 < id1) linkD = GetEDat(id2,id1);
-                    else linkD = GetEDat(id1,id2);
-                    if (linkD->distance < epsilon) neighbours.push_back(id2);
-                }
-                for (i=0 ; i<NU.GetInDeg() ; i++){
-                    id2 = NU.GetInNId(i);
-                    data2 = GetNDat(id2);
-                    if (data2->visited) continue;
-                    if (id2 < id1) linkD = GetEDat(id2,id1);
-                    else linkD = GetEDat(id1,id2);
+                    linkD = GetEDat(id1,id2);
                     if (linkD->distance < epsilon) neighbours.push_back(id2);
                 }
             }
@@ -843,23 +825,11 @@ void TParticleNet::CommunityDetectionDB(float epsilon){
         if (data1->cluster_db == 0){
             minDist = 9999999;
             idMin = -1;
-            for (i=0 ; i<NI.GetOutDeg() ; i++){
+            for (i=0 ; i<NI.GetDeg() ; i++){
                 id2 = NI.GetOutNId(i);
                 data2 = GetNDat(id2);
                 if (!data2->cluster_db) continue;
-                if (id2 < id1) linkD = GetEDat(id2,id1);
-                else linkD = GetEDat(id1,id2);
-                if (linkD->distance < minDist) {
-                    minDist = linkD->distance;
-                    idMin = id2;
-                }
-            }
-            for (i=0 ; i<NI.GetInDeg() ; i++){
-                id2 = NI.GetInNId(i);
-                data2 = GetNDat(id2);
-                if (!data2->cluster_db) continue;
-                if (id2 < id1) linkD = GetEDat(id2,id1);
-                else linkD = GetEDat(id1,id2);
+                linkD = GetEDat(id1,id2);
                 if (linkD->distance < minDist) {
                     minDist = linkD->distance;
                     idMin = id2;
@@ -1657,7 +1627,7 @@ void TParticleNet::SaveParticlePosition(const char *filename){
         
         if (data->index) {
             file << fixed << setprecision(2) << NI.GetId() << "\t "
-                                             << NI.GetDeg() << "\t"
+                                             << NI.GetOutDeg() << "\t"
                                              << data->ComCentrality << "\t"
                                              << data->indexReal << "\t" 
                                              << data->index->comm_id << "\t"
@@ -1665,7 +1635,7 @@ void TParticleNet::SaveParticlePosition(const char *filename){
         }
         else {
             file << fixed << setprecision(2) << NI.GetId() << "\t " 
-                                             << NI.GetDeg() << "\t"
+                                             << NI.GetOutDeg() << "\t"
                                              << data->ComCentrality << "\t"
                                              << data->indexReal << "\t"
                                              << "-1" << "\t"
