@@ -90,6 +90,17 @@ void SaveMeasures(const char *filename){
     fclose(F);
 }
 
+float GetBetweenness(){
+    TIntFltH BtwH;
+    TSnap::GetBetweennessCentr(Model, BtwH, 1.0);
+    float bet=0.0;
+    for (TParticleNet::TNodeI NI = Model->BegNI(); NI < Model->EndNI(); NI++) {
+        const int NId = NI.GetId();
+        bet += BtwH.GetDat(NId);
+    }
+    return bet;
+}
+
 
 void Message(int i){
     if (i==0){
@@ -185,7 +196,7 @@ void ModelDynamic(){
         if (!fNameCom.empty()) nmi = Model->NMI();
         else nmi = 0.0;
 
-        fprintf(stream,"%d %d %d %d %d %.2f %d %d %.5f %.2f\n",
+        fprintf(stream,"%d %d %d %d %d %.2f %d %d %.5f %.5f %.5f\n",
                                             count++, //1
                                             it, //2
                                             itc, //3
@@ -195,7 +206,8 @@ void ModelDynamic(){
                                             cInfo,  //7
                                             maxInfo, //8
                                             Model->printCentroidsError(), //9
-                                            Model->getNormFR()); //10
+                                            GetBetweenness(), //10
+                                            Model->getNormFR()); //11
 //        saveName = fName;
 //        saveName.replace(fName.size()-3,3,"par");
 //        Model->SaveParticlePosition(saveName.c_str());
