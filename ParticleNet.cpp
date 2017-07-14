@@ -45,9 +45,11 @@ void TParticleNet::LoadComFile(const char *filename){
     if (!stream) return;
     
     while (fscanf(stream, "%d %d", &id, &com) == 2){
-        particle = GetNDat(id);
-        particle->indexReal = com;
-        if (com>maxCom) maxCom = com;
+        if (IsNode(id)) {
+            particle = GetNDat(id);
+            particle->indexReal = com;
+            if (com>maxCom) maxCom = com;
+        }
     }
     numCommunities = maxCom;
 
@@ -605,16 +607,18 @@ if (r<0.001) r = 0.001;
         oldRR2 = oldRR;
         oldRR = RR;
         RR = 0.0;
-	float tempR;
+        float tempR;
 //        float Lixo1=0;
         for (NI=BegNI(); NI<EndNI(); NI++) {
-            if ((degree = NI.GetDeg())){
+            if ((degree = NI.GetOutDeg())){
                 data1 = GetNDat(NI.GetId());     
 //                data1->DistF /= degree;
 //                Lixo1 += data1->DistF;
                 tempR = 0;
                 for (i=0 ; i<PDIM ; i++) {
                     data1->x[i] += ((alpha*data1->dA[i] - beta*data1->dR[i]))/degree;
+//                    data1->x[i] += ((alpha*data1->dA[i] - beta*data1->dR[i]));
+                    data1->dAO[i] = ((alpha*data1->dA[i] - beta*data1->dR[i]))/degree;
                     tempR += fabs(data1->dA[i]);
                 }
                 RR += tempR/degree;
@@ -625,19 +629,19 @@ if (r<0.001) r = 0.001;
 
 // end Algorithm CORE
         
-	if (steps==0) {
-//        cout << "DEGREE\n\n\n";
-            for (NI=BegNI(); NI<EndNI(); NI++) {
-                data1 = GetNDat(NI.GetId());
-                data1->DistI = data1->DistF;
-                for (i=0 ; i<PDIM ; i++) {
-                    data1->dAO[i] = data1->dA[i];
-                    data1->dRO[i] = data1->dR[i];
-                }
-//                cout << NI.GetDeg() << " ";
-            }
-//        cout << "END DEGREE\n\n\n";
-        }
+//	if (steps==0) {
+////        cout << "DEGREE\n\n\n";
+//            for (NI=BegNI(); NI<EndNI(); NI++) {
+//                data1 = GetNDat(NI.GetId());
+//                data1->DistI = data1->DistF;
+//                for (i=0 ; i<PDIM ; i++) {
+//                    data1->dAO[i] = data1->dA[i];
+//                    data1->dRO[i] = data1->dR[i];
+//                }
+////                cout << NI.GetDeg() << " ";
+//            }
+////        cout << "END DEGREE\n\n\n";
+//        }
 
         
         RR = RR*0.1 + oldRR*0.9; // used to make the evolution of RR more stable (due to the coarse numerical integration step DT=1.0).
@@ -1493,18 +1497,23 @@ float TParticleNet::NMI(){
 float TParticleNet::getNormFR(){
     TParticleNet::TNodeI NI;
     PParticle data;
-    float DR, Total=0.0;
+    float DR, Total=0.0, value;
+    float degree;
     
     for (NI=BegNI() ; NI<EndNI(); NI++){
         data = GetNDat(NI.GetId());
+        degree = NI.GetOutDeg();
         DR = 0.0;
         for (i=0 ; i<PDIM ; i++) {
-            DR += data->dR[i]*data->dR[i];
+//            DR += (data->dR[i]*data->dR[i]) / (degree*degree);
+            value = data->dAO[i]; // - data->dR[i];
+//            value = (data->dRO[i]) * degree;
+            DR += value*value;
         }
         DR = sqrt(DR);
-        Total += DR*DR;
+        Total += pow(DR,2);//DR*DR;
     }
-    return sqrt(Total);
+    return Total;
 }
 
 

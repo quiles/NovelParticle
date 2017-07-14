@@ -122,6 +122,7 @@ void ModelDynamic(){
     char out[256];
     bool firstIt=true;
     int cInfo, maxInfo;
+    float nmi;
     
     FILE *stream;
     stream = fopen("output.txt", "w");
@@ -147,6 +148,8 @@ void ModelDynamic(){
         }
         cout << "Running model on: " << fName << endl;
 
+        if (!fNameCom.empty()) Model->LoadComFile(fNameCom.c_str());
+        
         it = Model->RunModel(steps,minDR,verbose);
 
 //        for (i=0 ; i<100 ; i++){
@@ -174,33 +177,36 @@ void ModelDynamic(){
         cout << "SizeC: " << Model->sizeLargeCom() << " ";
         cout << "FR: " << Model->getNormFR() << endl;
 
-        cInfo = Model->Infomap(maxInfo);
-//        cInfo = maxInfo = 0;
+//        cInfo = Model->Infomap(maxInfo);
+        cInfo = maxInfo = 0;
 
         cout << endl << endl;
 
+        if (!fNameCom.empty()) nmi = Model->NMI();
+        else nmi = 0.0;
 
-        fprintf(stream,"%d %d %d %d %d %d %d %.5f %.2f\n",
-                                            count++,
-                                            it,
-                                            itc,
-                                            Model->getNumCommunities(),
-                                            Model->sizeLargeCom(), 
-                                            cInfo, 
-                                            maxInfo,
-                                            Model->printCentroidsError(),
-                                            Model->getNormFR());
-        saveName = fName;
-        saveName.replace(fName.size()-3,3,"par");
-        Model->SaveParticlePosition(saveName.c_str());
-
-        saveName = fName;
-        saveName.replace(fName.size()-3,3,"for");
-        Model->SaveParticleForces(saveName.c_str());
-
-        saveName = fName;
-        saveName.replace(fName.size()-3,3,"mes");
-        SaveMeasures(saveName.c_str());        
+        fprintf(stream,"%d %d %d %d %d %.2f %d %d %.5f %.2f\n",
+                                            count++, //1
+                                            it, //2
+                                            itc, //3
+                                            Model->getNumCommunities(), //4
+                                            Model->sizeLargeCom(),  //5
+                                            nmi, // 6
+                                            cInfo,  //7
+                                            maxInfo, //8
+                                            Model->printCentroidsError(), //9
+                                            Model->getNormFR()); //10
+//        saveName = fName;
+//        saveName.replace(fName.size()-3,3,"par");
+//        Model->SaveParticlePosition(saveName.c_str());
+//
+//        saveName = fName;
+//        saveName.replace(fName.size()-3,3,"for");
+//        Model->SaveParticleForces(saveName.c_str());
+//
+//        saveName = fName;
+//        saveName.replace(fName.size()-3,3,"mes");
+//        SaveMeasures(saveName.c_str());        
     }
 }
 
