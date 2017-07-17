@@ -208,10 +208,10 @@ void ModelDynamic(){
                                             Model->printCentroidsError(), //9
                                             GetBetweenness(), //10
                                             Model->getNormFR()); //11
-//        saveName = fName;
-//        saveName.replace(fName.size()-3,3,"par");
-//        Model->SaveParticlePosition(saveName.c_str());
-//
+        saveName = fName;
+        saveName.replace(fName.size()-3,3,"par");
+        Model->SaveParticlePosition(saveName.c_str());
+
 //        saveName = fName;
 //        saveName.replace(fName.size()-3,3,"for");
 //        Model->SaveParticleForces(saveName.c_str());
@@ -374,7 +374,7 @@ void Model0(){
     Model->SetModelParameters(alpha, beta, 1.0);
     cout << "Model running...\n";
 
-    Model->RunModelNumerical(maxSteps, minDR, verbose);
+    Model->RunModel(maxSteps, minDR, verbose);
 
     cout << "Detecting clusters...\n";
     if (fixedcom) Model->CommunityDetection(numCom);

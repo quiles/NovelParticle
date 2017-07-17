@@ -576,7 +576,7 @@ int TParticleNet::RunModel(int maxIT, float minDR, bool verbose){
             r = sqrt(r);
             data1->DistF += r;
             data2->DistF += r;
-//if (r<1.0) r=1.0;
+if (r<1.0) r=1.0;
             for (i=0 ; i<PDIM ; i++) sum[i] = diff[i]/r;
             for (i=0 ; i<PDIM ; i++) {
                 data1->dA[i] -= sum[i];
@@ -608,16 +608,12 @@ if (r<0.001) r = 0.001;
         oldRR = RR;
         RR = 0.0;
         float tempR;
-//        float Lixo1=0;
         for (NI=BegNI(); NI<EndNI(); NI++) {
             if ((degree = NI.GetOutDeg())){
                 data1 = GetNDat(NI.GetId());     
-//                data1->DistF /= degree;
-//                Lixo1 += data1->DistF;
                 tempR = 0;
                 for (i=0 ; i<PDIM ; i++) {
                     data1->x[i] += ((alpha*data1->dA[i] - beta*data1->dR[i]))/degree;
-//                    data1->x[i] += ((alpha*data1->dA[i] - beta*data1->dR[i]));
                     data1->dAO[i] = ((alpha*data1->dA[i] - beta*data1->dR[i]))/degree;
                     tempR += fabs(data1->dA[i]);
                 }
@@ -628,21 +624,6 @@ if (r<0.001) r = 0.001;
 
 
 // end Algorithm CORE
-        
-//	if (steps==0) {
-////        cout << "DEGREE\n\n\n";
-//            for (NI=BegNI(); NI<EndNI(); NI++) {
-//                data1 = GetNDat(NI.GetId());
-//                data1->DistI = data1->DistF;
-//                for (i=0 ; i<PDIM ; i++) {
-//                    data1->dAO[i] = data1->dA[i];
-//                    data1->dRO[i] = data1->dR[i];
-//                }
-////                cout << NI.GetDeg() << " ";
-//            }
-////        cout << "END DEGREE\n\n\n";
-//        }
-
         
         RR = RR*0.1 + oldRR*0.9; // used to make the evolution of RR more stable (due to the coarse numerical integration step DT=1.0).
         ++steps;
@@ -1604,7 +1585,7 @@ void TParticleNet::SaveParticleForces(const char *filename){
     for (NI=BegNI() ; NI<EndNI(); NI++){
         data = GetNDat(NI.GetId());
         
-        file << fixed << setprecision(3) << NI.GetId() << "\t" << NI.GetDeg() << "\t" << data->DistI << "\t" << data->DistF << "\t";
+        file << fixed << setprecision(3) << NI.GetId() << "\t" << NI.GetOutDeg() << "\t" << data->DistI << "\t" << data->DistF << "\t";
         
         DA = DR = DAO = DRO = 0.0;
         for (i=0 ; i<PDIM ; i++) {
@@ -1652,6 +1633,9 @@ void TParticleNet::SaveParticlePosition(const char *filename){
                                              << data->cluster_db << "\t";
         }
         for (i=0 ; i<PDIM ; i++)  file << fixed << setprecision(2) << data->x[i] << "\t";
+        for (i=0 ; i<PDIM ; i++)  file << fixed << setprecision(2) << data->dA[i] << "\t";
+        for (i=0 ; i<PDIM ; i++)  file << fixed << setprecision(2) << data->dR[i] << "\t";
+        for (i=0 ; i<PDIM ; i++)  file << fixed << setprecision(2) << data->dAO[i] << "\t";
         file << "\n";
     }
     file.close();
