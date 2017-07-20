@@ -36,7 +36,7 @@ int savestep=100;
 float minDR=0.1;
 string fName, fNameCom="", newnetwork="";
 string fileOfNames;
-int maxSteps=1000;
+int maxSteps=10000;
 bool dynamic=false, gen=false;
 int dim=3;
 float epsilon;
@@ -130,7 +130,7 @@ void Message(int i){
 void ModelDynamic(){
     string saveName;
     int it, st, count, itc, i;
-    char out[256];
+    char out[256], ext[256];
     bool firstIt=true;
     int cInfo, maxInfo;
     float nmi;
@@ -150,7 +150,7 @@ void ModelDynamic(){
             sprintf(out,"time_0.par");
             saveName = fName;
             saveName.replace(fName.size()-3,3,out);
-            cout << "Initial state: " << saveName << endl;
+//            cout << "Initial state: " << saveName << endl;
             Model->SaveParticlePosition(saveName.c_str());
             firstIt = false;
         }
@@ -161,6 +161,7 @@ void ModelDynamic(){
 
         if (!fNameCom.empty()) Model->LoadComFile(fNameCom.c_str());
         
+        Model->SetTag(count);
         it = Model->RunModel(steps,minDR,verbose);
 
 //        for (i=0 ; i<100 ; i++){
@@ -181,35 +182,26 @@ void ModelDynamic(){
 
 
         itc = Model->CommunityDetection3();
+        cout << "T: " << count << " ";
         cout << "Steps: " << it << " ";
         cout << "StepsC: " << itc << " ";
         cout << "#Com: " << Model->getNumCommunities() << " ";
         cout << "CE: " << Model->printCentroidsError() << " ";
         cout << "SizeC: " << Model->sizeLargeCom() << " ";
+        cout << "DiffX: " << Model->getDiffX() << " ";
         cout << "FR: " << Model->getNormFR() << endl;
 
 //        cInfo = Model->Infomap(maxInfo);
         cInfo = maxInfo = 0;
 
-        cout << endl << endl;
+//        cout << endl << endl;
 
         if (!fNameCom.empty()) nmi = Model->NMI();
         else nmi = 0.0;
 
-        fprintf(stream,"%d %d %d %d %d %.2f %d %d %.5f %.5f %.5f\n",
-                                            count++, //1
-                                            it, //2
-                                            itc, //3
-                                            Model->getNumCommunities(), //4
-                                            Model->sizeLargeCom(),  //5
-                                            nmi, // 6
-                                            cInfo,  //7
-                                            maxInfo, //8
-                                            Model->printCentroidsError(), //9
-                                            GetBetweenness(), //10
-                                            Model->getNormFR()); //11
+        sprintf(ext,"t%d.par",count);
         saveName = fName;
-        saveName.replace(fName.size()-3,3,"par");
+        saveName.replace(fName.size()-3,3,ext);
         Model->SaveParticlePosition(saveName.c_str());
 
 //        saveName = fName;
@@ -219,9 +211,23 @@ void ModelDynamic(){
 //        saveName = fName;
 //        saveName.replace(fName.size()-3,3,"mes");
 //        SaveMeasures(saveName.c_str());        
+
+        fprintf(stream,"%d %d %d %d %d %.2f %d %d %.5f %.5f %.5f %.5f\n",
+                count++, //1
+                it, //2
+                itc, //3
+                Model->getNumCommunities(), //4
+                Model->sizeLargeCom(),  //5
+                nmi, // 6
+                cInfo,  //7
+                maxInfo, //8
+                Model->printCentroidsError(), //9
+                GetBetweenness(), //10
+                Model->getNormFR(), //11
+                Model->getDiffX()); // 12
+        
     }
 }
-
 
 
 /*
@@ -231,7 +237,7 @@ void ModelDynamic(){
     char out[256];
     bool firstIt=true;
     int cInfo, maxInfo;
-    
+ 
     FILE *stream;
     stream = fopen("output.txt", "w");
     fprintf(stream,"%% #file #transient #communities #max-com-size #infomap #centroid_error\n");
@@ -377,8 +383,7 @@ void Model0(){
     Model->RunModel(maxSteps, minDR, verbose);
 
     cout << "Detecting clusters...\n";
-    if (fixedcom) Model->CommunityDetection(numCom);
-    else Model->CommunityDetection3();
+    Model->CommunityDetection3();
     end = clock();
     
     sprintf(out,"cen");
@@ -563,7 +568,10 @@ int main(int argc,char *argv[]){
 //        else if (searchBeta) ModelSearchBeta();
         else if (dynamic) ModelDynamic();
         else if (gen) GenerateNetworks(fileOfNames.c_str(), opt_gen, k_eps, mst);
-        else Model0();
+        else {
+            cout << "Model0\n";
+            Model0();
+        }
     }
 
 

@@ -60,21 +60,24 @@ public:
     int auxi;
     int idx; // used to index an adjcency matrix
     float x[MAXDIM];
+    float xO[MAXDIM];
+    float xOL[MAXDIM];
     float dA[MAXDIM];
     float dR[MAXDIM];
     float dAO[MAXDIM];
     float dRO[MAXDIM];
-    float Vx, Vy, Vz;
-    float Ax, Ay, Az;
-    float AxR, AyR, AzR;
-    float AxA, AyA, AzA;
-    float AxT, AyT, AzT;
+//    float Vx, Vy, Vz;
+//    float Ax, Ay, Az;
+//    float AxR, AyR, AzR;
+//    float AxA, AyA, AzA;
+//    float AxT, AyT, AzT;
     float DistF, DistI;
     float ComCentrality; 
 // DBSCAN
     bool visited;
     int neighbours;
     int cluster_db;
+    int degree;
 
     
     //	float erro;
@@ -141,6 +144,7 @@ private:
     float sum[MAXDIM], r;
     float diff[MAXDIM];
     int PDIM;
+    int tag;
 
     float alpha; // attraction strength
     float beta; // repulsion strength
@@ -150,6 +154,7 @@ private:
     float mergeCentroidThreshold;
     bool centroidsMerged;
     //    int centroidTransient;
+    float DiffX;
 
     vector <TCentroid> Centroids;
 
@@ -209,9 +214,9 @@ public:
     void SaveNetworkFromParticle(const char *filename, float epsilon);
 
     int CommunityDetection3();
-    int CommunityDetection(int n_comm);
     void CommunityDetectionDB(float epsilon);
 
+    float getDiffX() {return DiffX;};
 
     void SetModelParameters(float a, float b, float g){
         alpha=a; beta=b; gamma=g; eta=1.0;
@@ -238,6 +243,7 @@ public:
     void DeleteNode(int node_id);
     void DeleteLink(int i, int j);
     float NMI();
+    void SetTag(int t);
 
 
     int DEGUB_(int i, int j){
