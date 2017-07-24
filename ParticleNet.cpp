@@ -346,17 +346,24 @@ int TParticleNet::RunModel(int maxIT, float minDR, bool verbose){
     float dg1, dg2;
     float tempR;
     float diffX=0.0, dTemp=0.0;
+    float Massa[PDIM];
+    float N;
+
+    N = GetNodes();
 
 
 //    if (verbose) cout << " Step#   \\theta_R   \\Delta\\theta_R \n";
 
+    netDegree = 0.0;
     for (NI=BegNI(); NI<EndNI(); NI++) {
         data1 = GetNDat(NI.GetId());
         data1->degree = NI.GetOutDeg();
+        netDegree += data1->degree;
         for (i=0 ; i<PDIM ; i++) {
             data1->xO[i] = data1->x[i];
         }
     }
+    netDegree /= N;
 
     
     do {
@@ -367,12 +374,11 @@ int TParticleNet::RunModel(int maxIT, float minDR, bool verbose){
             for (i=0 ; i<PDIM ; i++) {
                 data1->dA[i] = 0;
                 data1->dR[i] = 0;
+                Massa[i] = 0.0;
             }
         }
 
 // Algorithm CORE (O(n^2))
-
-        
         // Attraction O(m))
         for (EI=BegEI() ; EI < EndEI() ; EI++){
             id1 = EI.GetSrcNId();
@@ -385,48 +391,56 @@ int TParticleNet::RunModel(int maxIT, float minDR, bool verbose){
             r = 0;
             for (i=0 ; i<PDIM ; i++) r += diff[i]*diff[i];
             r = sqrt(r);
-            data1->DistF += r;
-            data2->DistF += r;
             if (r<1.0) r=1.0;
-            for (i=0 ; i<PDIM ; i++) sum[i] = pow(diff[i],2.0)/r;
+            for (i=0 ; i<PDIM ; i++) sum[i] = diff[i]/r;
             for (i=0 ; i<PDIM ; i++) {
                 data1->dA[i] -= sum[i]*data2->degree;
                 data2->dA[i] += sum[i]*data1->degree;
+//                data1->dA[i] -= sum[i];
+//                data2->dA[i] += sum[i];
             }
         }
     
         // repulsion O(n^2) ... n-k \approx n p/ k small
         for (NI=BegNI() ; NI < EndNI() ; NI ++){
             data1 = GetNDat(NI.GetId());
+            if (data1->degree < 3) continue;
             for (NN=NI ; NN < EndNI() ; NN++){
                 if (NI.IsNbrNId(NN.GetId()) || NI==NN) continue;
-                data2 = GetNDat(NN.GetId());         
+                data2 = GetNDat(NN.GetId());
+                if (data2->degree < 3) continue;
                 for (i=0 ; i<PDIM ; i++) diff[i] = data1->x[i] - data2->x[i];
                 r = 0;
                 for (i=0 ; i<PDIM ; i++) r += diff[i]*diff[i];
                 r = sqrt(r);
+                data1->DistF += r;
+                data2->DistF += r;
                 if (r<0.001) r = 0.001; // to avoid division per zero when the particles are in the same position
                 for (i=0 ; i<PDIM ; i++) sum[i] = exp(-r)*diff[i]/(r);
 
                 for (i=0 ; i<PDIM ; i++) {
-                    data1->dR[i] -= sum[i]*data2->degree;
-                    data2->dR[i] += sum[i]*data1->degree;
+                    data1->dR[i] -= sum[i]*data2->degree*data1->degree;
+                    data2->dR[i] += sum[i]*data1->degree*data2->degree;
+//                    data1->dR[i] -= sum[i]*data2->degree*data1->degree;
+//                    data2->dR[i] += sum[i]*data1->degree*data2->degree;
+//                    data1->dR[i] -= sum[i];
+//                    data2->dR[i] += sum[i];
                 }
             }
         }
         
-//        oldRR2 = oldRR;
         oldRR = RR;
         RR = 0.0;
         for (NI=BegNI(); NI<EndNI(); NI++) {
             if ((degree = NI.GetOutDeg())){
-                data1 = GetNDat(NI.GetId());     
+                data1 = GetNDat(NI.GetId());
                 tempR = 0;
                 for (i=0 ; i<PDIM ; i++) {
                     data1->xOL[i] = data1->x[i];
                     data1->x[i] += DT*((alpha*data1->dA[i] - beta*data1->dR[i]))/degree;
                     data1->dAO[i] = ((alpha*data1->dA[i] - beta*data1->dR[i]))/degree;
                     tempR += (data1->dR[i])*(data1->dR[i]);
+                    Massa[i] += data1->x[i]; // Centre of Mass
                 }
                 RR += sqrt(tempR); //degree;
             }
@@ -434,7 +448,29 @@ int TParticleNet::RunModel(int maxIT, float minDR, bool verbose){
             for (i=0 ; i<PDIM ; i++) dTemp += pow(data1->x[i] - data1->xOL[i],2);
             diffX += sqrt(dTemp);
         }
-        // end Algorithm CORE
+// end Algorithm CORE
+        
+        
+        for (i=0 ; i<PDIM ; i++) Massa[i] /= (N);
+        
+        float Media;
+        Media=0.0;
+        VarMass = 0.0;
+
+        for (NI=BegNI(); NI<EndNI(); NI++) {
+            data1 = GetNDat(NI.GetId());
+            for (i=0 ; i<PDIM ; i++) diff[i] = data1->x[i] - Massa[i];
+            r = 0;
+            for (i=0 ; i<PDIM ; i++) r += diff[i]*diff[i];
+            data1->DistF = r; // distance from particle to the centre of mass
+//            Media += sqrt(r);
+            Media += r;
+            VarMass += r*r; // r^2
+        }
+//        Media /= N;
+        
+        VarMass = (VarMass - Media) / (N);
+
         
         ++steps;
     
@@ -446,14 +482,13 @@ int TParticleNet::RunModel(int maxIT, float minDR, bool verbose){
         }
     } while (steps<maxIT);
     
-    cout << "STEPS: " << steps << endl;
-    
     diffX = 0.0;
     for (NI=BegNI(); NI<EndNI(); NI++) {
         data1 = GetNDat(NI.GetId());
+        degree = NI.GetOutDeg();
         dTemp = 0.0;
         for (i=0 ; i<PDIM ; i++) dTemp += pow(data1->x[i] - data1->xO[i],2);
-        diffX += sqrt(dTemp);
+        diffX += sqrt(dTemp)*degree;
     }
     DiffX = diffX;
 //    cout << "Diff X: " << diffX << endl;
@@ -871,14 +906,14 @@ float TParticleNet::NMI(){
     }
     
 
-    cout << "Matrix:\n";
+//    cout << "Matrix:\n";
     for (j=0 ; j<comUser ; j++){
         for (i=0 ; i<comUser ; i++){
             sumJ[j] += labelCount[j][i];
             sumI[i] += labelCount[j][i];
-            cout << labelCount[j][i] << "\t";
+//            cout << labelCount[j][i] << "\t";
         }
-        cout << ";" << endl;
+//        cout << ";" << endl;
     }
 
     comUser = numCommunities;

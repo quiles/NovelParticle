@@ -127,7 +127,7 @@ void Message(int i){
 
 
 
-void ModelDynamic(){
+void ModelDynamic(int exec){
     string saveName;
     int it, st, count, itc, i;
     char out[256], ext[256];
@@ -136,12 +136,13 @@ void ModelDynamic(){
     float nmi;
     
     FILE *stream;
-    stream = fopen("output.txt", "w");
+    sprintf(out,"output_%d.txt",exec);
+    stream = fopen(out, "w");
     fprintf(stream,"%% #file #transient #communities #max-com-size #infomap #centroid_error\n");
 
     steps = maxSteps;
     ifstream file (fileOfNames.c_str());
-    count = 1;
+    count = 0;
     while  (file >> fName){
         if (firstIt){
             Model = new TParticleNet(dim);
@@ -189,6 +190,7 @@ void ModelDynamic(){
         cout << "CE: " << Model->printCentroidsError() << " ";
         cout << "SizeC: " << Model->sizeLargeCom() << " ";
         cout << "DiffX: " << Model->getDiffX() << " ";
+        cout << "Var: " << Model->getVar() << " ";
         cout << "FR: " << Model->getNormFR() << endl;
 
 //        cInfo = Model->Infomap(maxInfo);
@@ -199,10 +201,10 @@ void ModelDynamic(){
         if (!fNameCom.empty()) nmi = Model->NMI();
         else nmi = 0.0;
 
-        sprintf(ext,"t%d.par",count);
-        saveName = fName;
-        saveName.replace(fName.size()-3,3,ext);
-        Model->SaveParticlePosition(saveName.c_str());
+//        sprintf(ext,"t%d.par",count);
+//        saveName = fName;
+//        saveName.replace(fName.size()-3,3,ext);
+//        Model->SaveParticlePosition(saveName.c_str());
 
 //        saveName = fName;
 //        saveName.replace(fName.size()-3,3,"for");
@@ -212,7 +214,7 @@ void ModelDynamic(){
 //        saveName.replace(fName.size()-3,3,"mes");
 //        SaveMeasures(saveName.c_str());        
 
-        fprintf(stream,"%d %d %d %d %d %.2f %d %d %.5f %.5f %.5f %.5f\n",
+        fprintf(stream,"%d %d %d %d %d %.2f %d %d %.5f %.5f %.5f %.5f %.5f %.5f\n",
                 count++, //1
                 it, //2
                 itc, //3
@@ -223,10 +225,13 @@ void ModelDynamic(){
                 maxInfo, //8
                 Model->printCentroidsError(), //9
                 GetBetweenness(), //10
-                Model->getNormFR(), //11
-                Model->getDiffX()); // 12
+                Model->getNetDegree(), //11
+                Model->getNormFR(), //12
+                Model->getVar(), //13
+                Model->getDiffX()); // 14
         
     }
+    fclose(stream);
 }
 
 
@@ -564,9 +569,15 @@ int main(int argc,char *argv[]){
             }
         }
 
+//        for (i=0 ; i<50 ; i++) {
+//            cout << "Running exp #" << i+1 << endl;
+//            ModelDynamic(i);
+//        }
+//        return 0;
+        
         if (byStep) ModelByStep();
 //        else if (searchBeta) ModelSearchBeta();
-        else if (dynamic) ModelDynamic();
+        else if (dynamic) ModelDynamic(0);
         else if (gen) GenerateNetworks(fileOfNames.c_str(), opt_gen, k_eps, mst);
         else {
             cout << "Model0\n";

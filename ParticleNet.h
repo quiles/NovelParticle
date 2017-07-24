@@ -140,6 +140,7 @@ private:
     // auxiliar variables
     int i,j,k;
     int id1, id2;
+    float netDegree;
     float degree;
     float sum[MAXDIM], r;
     float diff[MAXDIM];
@@ -155,6 +156,8 @@ private:
     bool centroidsMerged;
     //    int centroidTransient;
     float DiffX;
+    float VarMass;
+
 
     vector <TCentroid> Centroids;
 
@@ -217,6 +220,9 @@ public:
     void CommunityDetectionDB(float epsilon);
 
     float getDiffX() {return DiffX;};
+    float getVar() {return VarMass;};
+    float getNetDegree() {return netDegree;};
+    
 
     void SetModelParameters(float a, float b, float g){
         alpha=a; beta=b; gamma=g; eta=1.0;
