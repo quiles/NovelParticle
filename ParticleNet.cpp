@@ -404,11 +404,14 @@ int TParticleNet::RunModel(int maxIT, float minDR, bool verbose){
         // repulsion O(n^2) ... n-k \approx n p/ k small
         for (NI=BegNI() ; NI < EndNI() ; NI ++){
             data1 = GetNDat(NI.GetId());
-            if (data1->degree < 3) continue;
+            if (data1->degree < 2) {
+//                cout << "Node D<2\n" ;
+                    continue; // avoid repulsion on nodes with degree 1 or zero
+            }
             for (NN=NI ; NN < EndNI() ; NN++){
                 if (NI.IsNbrNId(NN.GetId()) || NI==NN) continue;
                 data2 = GetNDat(NN.GetId());
-                if (data2->degree < 3) continue;
+                if (data2->degree < 2) continue; // avoid repulsion on nodes with degree 1 or zero
                 for (i=0 ; i<PDIM ; i++) diff[i] = data1->x[i] - data2->x[i];
                 r = 0;
                 for (i=0 ; i<PDIM ; i++) r += diff[i]*diff[i];
@@ -519,13 +522,16 @@ void TParticleNet::CommunityDetectionDB(float epsilon){
         data1->cluster_db = 0;
         data1->neighbours = 0;
     }
-   
+
     for (NI=BegNI(); NI<EndNI(); NI++) {
         id1 = NI.GetId();
         data1 = GetNDat(id1);
         if (data1->visited) continue;
         data1->visited = true;
-        for (i=0 ; i<NI.GetDeg() ; i++){
+        if (NI.GetDeg() == 1) neighbours.push_back(NI.GetOutNId(0));
+        else
+//        cout << "Debug1\n\n";
+        for (i=0 ; i<NI.GetOutDeg() ; i++){
             id2 = NI.GetOutNId(i);
             data2 = GetNDat(id2);
             if (data2->visited) continue;
@@ -533,6 +539,7 @@ void TParticleNet::CommunityDetectionDB(float epsilon){
             if (linkD->distance < epsilon) neighbours.push_back(id2);
         }
         if (neighbours.size() > 2) {
+//            cout << "Debug2\n\n";
             data1->cluster_db = ++nextComDBId;
             while (!neighbours.empty()){
                 id1 = neighbours.back();
@@ -542,7 +549,7 @@ void TParticleNet::CommunityDetectionDB(float epsilon){
                 data1->cluster_db = nextComDBId;
                 NU = GetNI(id1);
 
-                for (i=0 ; i<NU.GetDeg() ; i++){
+                for (i=0 ; i<NU.GetOutDeg() ; i++){
                     id2 = NU.GetOutNId(i);
                     data2 = GetNDat(id2);
                     if (data2->visited) continue;
@@ -553,33 +560,7 @@ void TParticleNet::CommunityDetectionDB(float epsilon){
         }
         else neighbours.clear();
     }
-    int idMin;
-    float minDist;
-    for (NI=BegNI(); NI<EndNI(); NI++) {
-        id1 = NI.GetId();
-        data1 = GetNDat(id1);
-        if (data1->cluster_db == 0){
-            minDist = 9999999;
-            idMin = -1;
-            for (i=0 ; i<NI.GetDeg() ; i++){
-                id2 = NI.GetOutNId(i);
-                data2 = GetNDat(id2);
-                if (!data2->cluster_db) continue;
-                linkD = GetEDat(id1,id2);
-                if (linkD->distance < minDist) {
-                    minDist = linkD->distance;
-                    idMin = id2;
-                }
-            }
-            if (idMin != -1) {
-                data2 = GetNDat(idMin);
-//                data1->cluster_db = 999;
-                data1->cluster_db = data2->cluster_db;
-            }
-            
-        }
-        cout << "Node: " << NI.GetId() << " Cluster: " << data1->cluster_db << endl;
-    }
+    
 
 
 }

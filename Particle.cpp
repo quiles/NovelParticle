@@ -182,7 +182,9 @@ void ModelDynamic(int exec){
 //        Model->SaveParticlePosition(saveName.c_str());
 
 
+        itc = 0;
 //        itc = Model->CommunityDetection3();
+//        Model->CommunityDetectionDB(0.2);
         cout << "T: " << count << " ";
         cout << "Steps: " << it << " ";
         cout << "StepsC: " << itc << " ";
@@ -201,10 +203,10 @@ void ModelDynamic(int exec){
         if (!fNameCom.empty()) nmi = Model->NMI();
         else nmi = 0.0;
 
-//        sprintf(ext,"t%d.par",count);
-//        saveName = fName;
-//        saveName.replace(fName.size()-3,3,ext);
-//        Model->SaveParticlePosition(saveName.c_str());
+        sprintf(ext,"t%d.par",count);
+        saveName = fName;
+        saveName.replace(fName.size()-3,3,ext);
+        Model->SaveParticlePosition(saveName.c_str());
 
 //        saveName = fName;
 //        saveName.replace(fName.size()-3,3,"for");
