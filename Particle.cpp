@@ -182,7 +182,7 @@ void ModelDynamic(int exec){
 //        Model->SaveParticlePosition(saveName.c_str());
 
 
-        itc = Model->CommunityDetection3();
+//        itc = Model->CommunityDetection3();
         cout << "T: " << count << " ";
         cout << "Steps: " << it << " ";
         cout << "StepsC: " << itc << " ";
