@@ -421,9 +421,13 @@ int TParticleNet::RunModel(int maxIT, float minDR, bool verbose){
                 if (r<0.001) r = 0.001; // to avoid division per zero when the particles are in the same position
                 for (i=0 ; i<PDIM ; i++) sum[i] = exp(-r)*diff[i]/(r);
 
+
+		float d1, d2;
                 for (i=0 ; i<PDIM ; i++) {
-                    data1->dR[i] -= sum[i]*data2->degree*data1->degree;
-                    data2->dR[i] += sum[i]*data1->degree*data2->degree;
+		    d1 = data1->degree;
+		    d2 = data2->degree;
+                    data1->dR[i] -= sum[i]*d2*d1;
+                    data2->dR[i] += sum[i]*d1*d2;
 //                    data1->dR[i] -= sum[i]*data2->degree*data1->degree;
 //                    data2->dR[i] += sum[i]*data1->degree*data2->degree;
 //                    data1->dR[i] -= sum[i];
@@ -432,6 +436,7 @@ int TParticleNet::RunModel(int maxIT, float minDR, bool verbose){
             }
         }
         
+
         oldRR = RR;
         RR = 0.0;
         for (NI=BegNI(); NI<EndNI(); NI++) {

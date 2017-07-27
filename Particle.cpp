@@ -183,7 +183,7 @@ void ModelDynamic(int exec){
 
 
         itc = 0;
-//        itc = Model->CommunityDetection3();
+        itc = Model->CommunityDetection3();
 //        Model->CommunityDetectionDB(0.2);
         cout << "T: " << count << " ";
         cout << "Steps: " << it << " ";
