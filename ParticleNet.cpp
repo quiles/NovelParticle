@@ -484,6 +484,7 @@ int TParticleNet::RunModel(int maxIT, float minDR, bool verbose){
     
         value = fabs(oldRR-RR); // / (float)Particles.size();
 //        if (verbose) cout << tag << " " << steps << " " << RR << " " << value << " " << diffX << endl; //" DiffX " << diffX << endl;
+        if (verbose) cout << "Running: " << steps << " --> " << value << endl; //" DiffX " << diffX << endl;
 
         if (value < minDR) {
             maxIT = steps;

@@ -36,7 +36,7 @@ int savestep=100;
 float minDR=0.1;
 string fName, fNameCom="", newnetwork="";
 string fileOfNames;
-int maxSteps=10000;
+int maxSteps=2000;
 bool dynamic=false, gen=false;
 int dim=3;
 float epsilon;
@@ -416,7 +416,62 @@ void Model0(){
     saveName.replace(fName.size()-3,3,out);
     Model->SaveParticlePosition(saveName.c_str());
     cout << "Final state: " << saveName << endl;    
+
+    FILE *st;
+    st = fopen("Exp_dim.txt","a+");
+    fprintf(st,"%d %d %.3f %.3f %.3f %.3f %.3f",
+                Model->getNumCommunities(), //1
+                Model->sizeLargeCom(),  //2
+                Model->NMI(), //3
+                Model->printCentroidsError(), //4
+                Model->getNormFR(), //5
+                Model->getVar(), //6
+                Model->getDiffX()); //7
+
 }
+
+void ExpDim(float zout, int ite){
+    string saveName;
+    char out[256];
+    int i;
+    clock_t ini,end;
+    int steps;
+    
+    ini = clock();
+    
+    Model = new TParticleNet(dim);
+    Model->LoadFromFile(fName.c_str());
+    
+//    Model = TParticleNet::LoadFromFile(fName.c_str(),dim);
+    if (!fNameCom.empty()) Model->LoadComFile(fNameCom.c_str());
+  
+    sprintf(out,"time_0.par");
+    saveName = fName;
+    saveName.replace(fName.size()-3,3,out);
+    Model->SaveParticlePosition(saveName.c_str());
+    cout << "Running ite: " << ite << endl;
+    
+    Model->SetModelParameters(alpha, beta, 1.0);
+    steps = Model->RunModel(maxSteps, minDR, verbose);
+    Model->CommunityDetection3();    
+
+    FILE *st;
+    sprintf(out,"output_%.2f_%d.txt",zout,dim);
+    st = fopen(out,"a+");
+    fprintf(st,"%.2f %d %d %d %.5f %.3f %.3f %.3f %.3f\n",
+		zout,                
+		steps,
+		Model->getNumCommunities(), //2
+                Model->sizeLargeCom(),  //3
+                Model->NMI(), //4
+                Model->printCentroidsError(), //5
+                Model->getNormFR(), //6
+                Model->getVar(), //7
+                Model->getDiffX() //8
+    );
+    fclose(st);
+}
+
 
 
 //void ModelLote(){
@@ -461,6 +516,7 @@ int main(int argc,char *argv[]){
     float k_eps;
     bool mst=false;
     int opt_gen;
+    float zout;
     
     
 //    ModelLote(); return 0;
@@ -508,7 +564,9 @@ int main(int argc,char *argv[]){
             }
             else if (strcmp(argv[i],"-a") == 0){
                 if (++i>=argc) break;
-                alpha = (float)strtod(argv[i],NULL);
+//                alpha = (float)strtod(argv[i],NULL);
+		alpha = 1.0;
+		zout = (float)strtod(argv[i],NULL);
             }
             else if (strcmp(argv[i],"-cf") == 0){
                 if (++i>=argc) break;
@@ -571,11 +629,10 @@ int main(int argc,char *argv[]){
             }
         }
 
-//        for (i=0 ; i<50 ; i++) {
-//            cout << "Running exp #" << i+1 << endl;
-//            ModelDynamic(i);
-//        }
-//        return 0;
+        for (i=0 ; i<30 ; i++) {
+            ExpDim(zout,i);
+        }
+        return 0;
         
         if (byStep) ModelByStep();
 //        else if (searchBeta) ModelSearchBeta();
