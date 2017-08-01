@@ -15,7 +15,7 @@
 #undef min
 #undef max
 
-#define MAXDIM 10
+#define MAXDIM 20
 
 using namespace std;
 
@@ -155,7 +155,7 @@ private:
     float mergeCentroidThreshold;
     bool centroidsMerged;
     //    int centroidTransient;
-    float DiffX;
+    float DiffX, DiffR;
     float VarMass;
 
 
@@ -220,6 +220,7 @@ public:
     void CommunityDetectionDB(float epsilon);
 
     float getDiffX() {return DiffX;};
+    float getDiffR() {return DiffR;};
     float getVar() {return VarMass;};
     float getNetDegree() {return netDegree;};
     

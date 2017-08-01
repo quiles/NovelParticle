@@ -36,7 +36,7 @@ int savestep=100;
 float minDR=0.1;
 string fName, fNameCom="", newnetwork="";
 string fileOfNames;
-int maxSteps=2000;
+int maxSteps=3000;
 bool dynamic=false, gen=false;
 int dim=3;
 float epsilon;
@@ -136,7 +136,7 @@ void ModelDynamic(int exec){
     float nmi;
     
     FILE *stream;
-    sprintf(out,"output_%d.txt",exec);
+    sprintf(out,"output.txt");
     stream = fopen(out, "w");
     fprintf(stream,"%% #file #transient #communities #max-com-size #infomap #centroid_error\n");
 
@@ -183,16 +183,16 @@ void ModelDynamic(int exec){
 
 
         itc = 0;
-        itc = Model->CommunityDetection3();
+//        itc = Model->CommunityDetection3();
 //        Model->CommunityDetectionDB(0.2);
         cout << "T: " << count << " ";
         cout << "Steps: " << it << " ";
-        cout << "StepsC: " << itc << " ";
-        cout << "#Com: " << Model->getNumCommunities() << " ";
-        cout << "CE: " << Model->printCentroidsError() << " ";
-        cout << "SizeC: " << Model->sizeLargeCom() << " ";
-        cout << "DiffX: " << Model->getDiffX() << " ";
-        cout << "Var: " << Model->getVar() << " ";
+//        cout << "StepsC: " << itc << " ";
+//        cout << "#Com: " << Model->getNumCommunities() << " ";
+//        cout << "CE: " << Model->printCentroidsError() << " ";
+//        cout << "SizeC: " << Model->sizeLargeCom() << " ";
+//        cout << "DiffX: " << Model->getDiffX() << " ";
+//        cout << "Var: " << Model->getVar() << " ";
         cout << "FR: " << Model->getNormFR() << endl;
 
 //        cInfo = Model->Infomap(maxInfo);
@@ -216,21 +216,22 @@ void ModelDynamic(int exec){
 //        saveName.replace(fName.size()-3,3,"mes");
 //        SaveMeasures(saveName.c_str());        
 
-        fprintf(stream,"%d %d %d %d %d %.2f %d %d %.5f %.5f %.5f %.5f %.5f %.5f\n",
+        fprintf(stream,"%d %d %d %d %d %.2f %d %d %.5f %.5f %.5f %.5f %.5f %.5f %.5f\n",
                 count++, //1
                 it, //2
-                itc, //3
-                Model->getNumCommunities(), //4
-                Model->sizeLargeCom(),  //5
-                nmi, // 6
-                cInfo,  //7
-                maxInfo, //8
-                Model->printCentroidsError(), //9
-                GetBetweenness(), //10
+                99999, //itc, //3
+                0, //Model->getNumCommunities(), //4
+                0, //Model->sizeLargeCom(),  //5
+                0.0, //nmi, // 6
+                0, //cInfo,  //7
+                0, //maxInfo, //8
+                0.0, //Model->printCentroidsError(), //9
+                0.0, //GetBetweenness(), //10
                 Model->getNetDegree(), //11
                 Model->getNormFR(), //12
-                Model->getVar(), //13
-                Model->getDiffX()); // 14
+                Model->getVar(), //13 (MSD distances from the centre of mass)
+                Model->getDiffX(), // 14 (RMSD of positions)
+                Model->getDiffR()); // 15 (RMSD of repulsion interactions)
         
     }
     fclose(stream);
@@ -336,7 +337,8 @@ void ModelByStep(){
 //    Model->RunModel(steps, 0.1, false);
 
     for (i=1 ; i<steps ; i++){
-        Model->RunByStep();
+        Model->RunModel(0, minDR, verbose);
+//        Model->RunByStep();
         if (i>=0 && i%savestep==0) {
             sprintf(out,"time_%d.par",i);
             saveName = fName;
@@ -518,6 +520,11 @@ int main(int argc,char *argv[]){
     int opt_gen;
     float zout;
     
+    printf("Running: \n$ ");
+    for (i=0 ; i<argc ; i++) {
+        printf("%s ",argv[i]);
+    }
+    printf("\n\n");
     
 //    ModelLote(); return 0;
     
@@ -629,10 +636,10 @@ int main(int argc,char *argv[]){
             }
         }
 
-        for (i=0 ; i<30 ; i++) {
-            ExpDim(zout,i);
-        }
-        return 0;
+//        for (i=0 ; i<10 ; i++) {
+//            ExpDim(zout,i);
+//        }
+//        return 0;
         
         if (byStep) ModelByStep();
 //        else if (searchBeta) ModelSearchBeta();

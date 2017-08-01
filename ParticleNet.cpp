@@ -345,12 +345,12 @@ int TParticleNet::RunModel(int maxIT, float minDR, bool verbose){
     float value;
     float dg1, dg2;
     float tempR;
-    float diffX=0.0, dTemp=0.0;
+    float diffX=0.0, dTemp=0.0, diffR=0.0, dTempR=0.0;
     float Massa[PDIM];
-    float N;
+    float N, Media;
 
     N = GetNodes();
-
+    RR = 0.0;
 
 //    if (verbose) cout << " Step#   \\theta_R   \\Delta\\theta_R \n";
 
@@ -361,6 +361,7 @@ int TParticleNet::RunModel(int maxIT, float minDR, bool verbose){
         netDegree += data1->degree;
         for (i=0 ; i<PDIM ; i++) {
             data1->xO[i] = data1->x[i];
+            data1->dRO[i] = data1->dR[i];
         }
     }
     netDegree /= N;
@@ -391,7 +392,7 @@ int TParticleNet::RunModel(int maxIT, float minDR, bool verbose){
             r = 0;
             for (i=0 ; i<PDIM ; i++) r += diff[i]*diff[i];
             r = sqrt(r);
-            if (r<1.0) r=1.0;
+            if (r<1.0) r=1.0; // to reduce the attraction when particles get close <1
             for (i=0 ; i<PDIM ; i++) sum[i] = diff[i]/r;
             for (i=0 ; i<PDIM ; i++) {
                 data1->dA[i] -= sum[i]*data2->degree;
@@ -404,10 +405,7 @@ int TParticleNet::RunModel(int maxIT, float minDR, bool verbose){
         // repulsion O(n^2) ... n-k \approx n p/ k small
         for (NI=BegNI() ; NI < EndNI() ; NI ++){
             data1 = GetNDat(NI.GetId());
-            if (data1->degree < 2) {
-//                cout << "Node D<2\n" ;
-                    continue; // avoid repulsion on nodes with degree 1 or zero
-            }
+            if (data1->degree < 2) continue; // avoid repulsion on nodes with degree 1 or zero
             for (NN=NI ; NN < EndNI() ; NN++){
                 if (NI.IsNbrNId(NN.GetId()) || NI==NN) continue;
                 data2 = GetNDat(NN.GetId());
@@ -422,14 +420,12 @@ int TParticleNet::RunModel(int maxIT, float minDR, bool verbose){
                 for (i=0 ; i<PDIM ; i++) sum[i] = exp(-r)*diff[i]/(r);
 
 
-		float d1, d2;
+                float d1, d2;
                 for (i=0 ; i<PDIM ; i++) {
-		    d1 = data1->degree;
-		    d2 = data2->degree;
+                    d1 = data1->degree;
+                    d2 = data2->degree;
                     data1->dR[i] -= sum[i]*d2*d1;
                     data2->dR[i] += sum[i]*d1*d2;
-//                    data1->dR[i] -= sum[i]*data2->degree*data1->degree;
-//                    data2->dR[i] += sum[i]*data1->degree*data2->degree;
 //                    data1->dR[i] -= sum[i];
 //                    data2->dR[i] += sum[i];
                 }
@@ -444,63 +440,77 @@ int TParticleNet::RunModel(int maxIT, float minDR, bool verbose){
                 data1 = GetNDat(NI.GetId());
                 tempR = 0;
                 for (i=0 ; i<PDIM ; i++) {
-                    data1->xOL[i] = data1->x[i];
-                    data1->x[i] += DT*((alpha*data1->dA[i] - beta*data1->dR[i]))/degree;
-                    data1->dAO[i] = ((alpha*data1->dA[i] - beta*data1->dR[i]))/degree;
+//                    data1->xOL[i] = data1->x[i];
+                    value = DT*((alpha*data1->dA[i] - beta*data1->dR[i]))/degree;
+                    data1->x[i] += value;
+                    data1->dAO[i] = value;
                     tempR += (data1->dR[i])*(data1->dR[i]);
-                    Massa[i] += data1->x[i]; // Centre of Mass
                 }
                 RR += sqrt(tempR); //degree;
             }
-            dTemp = 0.0;
-            for (i=0 ; i<PDIM ; i++) dTemp += pow(data1->x[i] - data1->xOL[i],2);
-            diffX += sqrt(dTemp);
         }
 // end Algorithm CORE
-        
-        
-        for (i=0 ; i<PDIM ; i++) Massa[i] /= (N);
-        
-        float Media;
-        Media=0.0;
-        VarMass = 0.0;
 
-        for (NI=BegNI(); NI<EndNI(); NI++) {
-            data1 = GetNDat(NI.GetId());
-            for (i=0 ; i<PDIM ; i++) diff[i] = data1->x[i] - Massa[i];
-            r = 0;
-            for (i=0 ; i<PDIM ; i++) r += diff[i]*diff[i];
-            data1->DistF = r; // distance from particle to the centre of mass
-//            Media += sqrt(r);
-            Media += r;
-            VarMass += r*r; // r^2
-        }
-//        Media /= N;
-        
-        VarMass = (VarMass - Media) / (N);
-
-        
         ++steps;
-    
         value = fabs(oldRR-RR); // / (float)Particles.size();
-//        if (verbose) cout << tag << " " << steps << " " << RR << " " << value << " " << diffX << endl; //" DiffX " << diffX << endl;
         if (verbose) cout << "Running: " << steps << " --> " << value << endl; //" DiffX " << diffX << endl;
-
         if (value < minDR) {
-            maxIT = steps;
+            if (steps%2) maxIT = steps;
+            else maxIT = steps+1;
         }
     } while (steps<maxIT);
     
+    
+
+    
+    // root-mean-square deviation of squared sums of repulsions and positions
     diffX = 0.0;
     for (NI=BegNI(); NI<EndNI(); NI++) {
         data1 = GetNDat(NI.GetId());
         degree = NI.GetOutDeg();
         dTemp = 0.0;
-        for (i=0 ; i<PDIM ; i++) dTemp += pow(data1->x[i] - data1->xO[i],2);
-        diffX += sqrt(dTemp)*degree;
+        dTempR = 0.0;
+        
+        for (i=0 ; i<PDIM ; i++) Massa[i] = 0.0;
+   
+        for (i=0 ; i<PDIM ; i++) {
+            Massa[i] += data1->x[i];
+            
+            value = data1->x[i] - data1->xO[i];
+            dTemp += value*value*degree;
+
+            value = data1->dR[i] - data1->dRO[i];
+            dTempR += value*value*degree;
+        }
+        diffX += dTemp;
+        diffR += dTempR;
+
+        for (i=0 ; i<PDIM ; i++) Massa[i] /= (N);
+
     }
-    DiffX = diffX;
-//    cout << "Diff X: " << diffX << endl;
+    DiffX = diffX/N;
+    DiffR = diffR/N;
+    
+    
+    for (NI=BegNI(); NI<EndNI(); NI++) {
+        data1 = GetNDat(NI.GetId());
+        for (i=0 ; i<PDIM ; i++) diff[i] = data1->x[i] - Massa[i];
+        r = 0;
+        for (i=0 ; i<PDIM ; i++) r += diff[i]*diff[i];
+        r = sqrt(r);
+        data1->DistF = r; // distance from particle to the centre of mass
+        Media += r;
+    }
+    Media /= N;
+    
+    // mean-square deviation of distances from the centre of mass
+    for (NI=BegNI(); NI<EndNI(); NI++) {
+        data1 = GetNDat(NI.GetId());
+        value = data1->DistF - Media;
+        VarMass += value*value;
+    }
+    VarMass /= N;
+    
     return steps;
 }
 
@@ -1202,8 +1212,8 @@ float TParticleNet::getNormFR(){
             value = data->dR[i];
             DR += value*value;
         }
-        DR = sqrt(DR);
-        Total += pow(DR,2);//DR*DR;
+//        DR = sqrt(DR);
+        Total += DR; //pow(DR,2);//DR*DR;
     }
     return Total;
 }
