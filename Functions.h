@@ -39,9 +39,25 @@ void NetworkFromMatrix_E(const char *input, const char *output, float epsilon, b
         
         if (MST) MaxSTree(&matF, &mat, N);
         
+        float max;
+        int pmax;
+        bool connected;
         for (i=0 ; i<N-1 ; i++){
+            max = matF[i+1][i];
+            pmax = i+1;
+            connected = false;
             for (j=i+1 ; j<N ; j++){
-                if (matF[j][i] >= epsilon) mat[j][i] = true;
+                if (matF[j][i] > max) {
+                    max = matF[j][i];
+                    pmax = j;
+                }
+                if (matF[j][i] >= epsilon) {
+                    mat[j][i] = true;
+                    connected = true;
+                }
+                if (!connected) {
+                    mat[pmax][i] = true;
+                }
             }
         }
         
@@ -81,41 +97,48 @@ void NetworkFromMatrix_K(const char *input, const char *output, int K, bool MST)
         mat = new bool*[N];
         matF = new float*[N];
         for (i=0 ; i<N ; i++){
-            mat[i] = new bool[i+1];
-            matF[i] = new float[i+1];
-            for (j=0 ; j<i+1 ; j++) mat[i][j] = false;
+            mat[i] = new bool[N];
+            matF[i] = new float[N];
+            for (j=0 ; j<N ; j++) {
+                mat[i][j] = false;
+                matF[i][j] = 0.0;
+            }
         }
         for (i=0 ; i<N-1 ; i++){
             for (j=i+1 ; j<N ; j++){
                 fscanf(stIn,"%f", &value);
                 matF[j][i] = value;
+                matF[i][j] = value;
             }
         }
         fclose(stIn);
         
-        if (MST) MaxSTree(&matF, &mat, N);
+//        if (MST) MaxSTree(&matF, &mat, N);
 
         float max;
         int pmax;
         
-        for (i=0 ; i<N-1 ; i++){
+        for (i=0 ; i<N ; i++){
             for (k=0 ; k<K ; k++){
-                pmax = i+1;
-                max = matF[i+1][i];
-                for (j=i+2 ; j<N ; j++){
-                    if (matF[j][i] > max){
+                pmax = 0;
+                max = matF[i][0];
+                for (j=1 ; j<N ; j++){
+                    if (matF[i][j] > max){
                         pmax = j;
-                        max = matF[j][i];
+                        max = matF[i][j];
                     }
                 }
-                mat[pmax][i] = true;
-                matF[pmax][i] = 0.0;
+                if (max>0.0) {
+                    mat[i][pmax] = true;
+                    mat[pmax][i] = true;
+                    matF[i][pmax] = 0.0;
+                }
             }
         }
         
         for (i=0 ; i<N-1 ; i++){
             for (j=i+1 ; j<N ; j++){
-                if (mat[j][i]) {
+                if (mat[i][j]) {
                     fprintf(stOut,"%d %d\n",i+1,j+1);
                     degree++;
                 }

@@ -92,6 +92,71 @@ void TParticleNet::LoadFromFile(const char *filename){
 }
 
 
+void TParticleNet::ChangeNetwork(int op, float per){
+    TParticleNet::TNodeI NI;
+    TParticleNet::TEdgeI EI;
+    PLinkData linkD;
+    int id1, id2, N;
+    float guess;
+    vector<int> listNodes;
+
+    N = GetNodes();
+    
+    for (NI=BegNI(); NI<EndNI(); NI++) listNodes.push_back(NI.GetId());
+
+cout << "\n\nChanges\n";
+    
+    switch(op){
+        case 0: { // changes links randomly
+            for (EI=BegEI() ; EI < EndEI() ; EI++){
+                guess = (float)(rand() % 1001) / 1000.0;
+//                cout << "Guess: " << guess << " -> ";
+                id1 = EI.GetSrcNId();
+                id2 = EI.GetDstNId();
+//                cout << "Old Link: [" << id1 << ":" << id2 << "] ";
+                if (guess <= per) {
+                    // remove link
+                    id1 = EI.GetSrcNId();
+                    id2 = EI.GetDstNId();
+//                    cout << "Old Link: [" << id1 << ":" << id2 << "] -> ";
+                    linkD = GetEDat(id1,id2);
+                    delete linkD;
+                    DelEdge(id1,id2,false);
+                    DelEdge(id2,id1,false);
+                    // add new link
+                    do {
+                        id1 = listNodes[rand()%N];
+                        id2 = listNodes[rand()%N];
+                    } while (IsEdge(id1,id2) || id1==id2);
+//                    cout << " -> New Link: [" << id1 << ":" << id2 << "]";
+                    linkD = new TLinkData();
+                    linkD->refreshed = true;
+                    linkD->age = AGE;
+                    AddEdge(id1, id2, linkD);
+                    AddEdge(id2, id1, linkD);
+                }
+//                cout << endl;
+            }
+        }; break;
+        case 1: { // add links  
+            
+        }; break;
+        case 3: { // remove links
+            
+        }; break;
+        case 4: { //
+        }; break;
+    }
+//    cout << endl << endl;
+//    for (EI=BegEI() ; EI < EndEI() ; EI++){
+//        id1 = EI.GetSrcNId();
+//        id2 = EI.GetDstNId();
+//        cout << "Final Links: [" << id1 << ":" << id2 << "] \n";
+//    }
+//    cout << endl;
+    
+}
+
 void TParticleNet::ReloadNetwork(const char *filename){
     FILE *stream;
     stream = fopen(filename, "r+");
@@ -345,7 +410,7 @@ int TParticleNet::RunModel(int maxIT, float minDR, bool verbose){
     float value;
     float dg1, dg2;
     float tempR;
-    float diffX=0.0, dTemp=0.0, diffR=0.0, dTempR=0.0;
+    float diffX[4]={0.0,0.0,0.0,0.0}, dTemp[4]={0.0,0.0,0.0,0.0}, diffR[4]={0.0,0.0,0.0,0.0}, dTempR[4]={0.0,0.0,0.0,0.0};
     float Massa[PDIM];
     float N, Media;
 
@@ -464,12 +529,12 @@ int TParticleNet::RunModel(int maxIT, float minDR, bool verbose){
 
     
     // root-mean-square deviation of squared sums of repulsions and positions
-    diffX = 0.0;
+    diffX[0] = diffX[1] = diffX[2] = diffX[3] = 0.0;
     for (NI=BegNI(); NI<EndNI(); NI++) {
         data1 = GetNDat(NI.GetId());
         degree = NI.GetOutDeg();
-        dTemp = 0.0;
-        dTempR = 0.0;
+        dTemp[0] = dTemp[1] = dTemp[2] = dTemp[3] = 0.0;
+        dTempR[0] = dTempR[1] = dTempR[2] = dTempR[3] = 0.0;
         
         for (i=0 ; i<PDIM ; i++) Massa[i] = 0.0;
    
@@ -477,19 +542,39 @@ int TParticleNet::RunModel(int maxIT, float minDR, bool verbose){
             Massa[i] += data1->x[i];
             
             value = data1->x[i] - data1->xO[i];
-            dTemp += value*value*degree;
+            dTemp[0] += value*value;
+            dTemp[1] += value*value/degree;
+            dTemp[2] += value*value*degree;
+            if (degree > 1) dTemp[3] += value*value;
 
             value = data1->dR[i] - data1->dRO[i];
-            dTempR += value*value*degree;
+            dTempR[0] += value*value;
+            dTempR[1] += value*value/degree;
+            dTempR[2] += value*value*degree;
+            if (degree>1)dTempR[3] += value*value;
         }
-        diffX += dTemp;
-        diffR += dTempR;
+        diffX[0] += dTemp[0];
+        diffX[1] += dTemp[1];
+        diffX[2] += dTemp[2];
+        diffX[3] += dTemp[3];
+
+        diffR[0] += dTempR[0];
+        diffR[1] += dTempR[1];
+        diffR[2] += dTempR[2];
+        diffR[3] += dTempR[3];
 
         for (i=0 ; i<PDIM ; i++) Massa[i] /= (N);
 
     }
-    DiffX = diffX/N;
-    DiffR = diffR/N;
+    DiffX[0] = diffX[0]/N;
+    DiffX[1] = diffX[1]/N;
+    DiffX[2] = diffX[2]/N;
+    DiffX[3] = diffX[3]/N;
+
+    DiffR[0] = diffR[0]/N;
+    DiffR[1] = diffR[1]/N;
+    DiffR[2] = diffR[2]/N;
+    DiffR[3] = diffR[3]/N;
     
     
     for (NI=BegNI(); NI<EndNI(); NI++) {
@@ -503,13 +588,24 @@ int TParticleNet::RunModel(int maxIT, float minDR, bool verbose){
     }
     Media /= N;
     
+    int ccd=0;
     // mean-square deviation of distances from the centre of mass
     for (NI=BegNI(); NI<EndNI(); NI++) {
         data1 = GetNDat(NI.GetId());
+        degree = NI.GetOutDeg();
         value = data1->DistF - Media;
-        VarMass += value*value;
+        VarMass[0] += value*value;
+        VarMass[1] += value*value/degree;
+        VarMass[2] += value*value*degree;
+        if (degree>1) {
+            VarMass[3] += value*value;
+            ccd++;
+        }
     }
-    VarMass /= N;
+    VarMass[0] /= N;
+    VarMass[1] /= N;
+    VarMass[2] /= N;
+    VarMass[3] /= (float)ccd;
     
     return steps;
 }
@@ -1198,7 +1294,7 @@ float TParticleNet::NMI(){
 //// fixed << setprecision(2)
 //
 
-float TParticleNet::getNormFR(){
+float TParticleNet::getNormFR(int d){
     TParticleNet::TNodeI NI;
     PParticle data;
     float DR, Total=0.0, value;
@@ -1210,7 +1306,12 @@ float TParticleNet::getNormFR(){
         DR = 0.0;
         for (i=0 ; i<PDIM ; i++) {
             value = data->dR[i];
-            DR += value*value;
+            if (d==0) DR += value*value;
+            else if (d==1) DR += value*value/degree;
+            else if (d==2) DR += value*value*degree;
+            else if (d==3) {
+                if (degree>1) DR += value*value;
+            }
         }
 //        DR = sqrt(DR);
         Total += DR; //pow(DR,2);//DR*DR;

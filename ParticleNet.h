@@ -155,8 +155,8 @@ private:
     float mergeCentroidThreshold;
     bool centroidsMerged;
     //    int centroidTransient;
-    float DiffX, DiffR;
-    float VarMass;
+    float DiffX[4], DiffR[4];
+    float VarMass[4];
 
 
     vector <TCentroid> Centroids;
@@ -218,10 +218,13 @@ public:
 
     int CommunityDetection3();
     void CommunityDetectionDB(float epsilon);
+    
+    void ChangeNetwork(int op, float per);
 
-    float getDiffX() {return DiffX;};
-    float getDiffR() {return DiffR;};
-    float getVar() {return VarMass;};
+
+    float getDiffX(int d) {return DiffX[d];};
+    float getDiffR(int d) {return DiffR[d];};
+    float getVar(int d) {return VarMass[d];};
     float getNetDegree() {return netDegree;};
     
 
@@ -240,7 +243,7 @@ public:
 */
     };
     int getNumCommunities() {return Centroids.size();};
-    float getNormFR();
+    float getNormFR(int d);
     float printCentroidsError();
     int sizeLargeCom();
     int Infomap(int &max);

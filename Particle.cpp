@@ -36,8 +36,8 @@ int savestep=100;
 float minDR=0.1;
 string fName, fNameCom="", newnetwork="";
 string fileOfNames;
-int maxSteps=3000;
-bool dynamic=false, gen=false;
+int maxSteps=10000;
+bool dynamic=false, gen=false, simC=false;
 int dim=3;
 float epsilon;
 bool fixedcom=false;
@@ -136,7 +136,7 @@ void ModelDynamic(int exec){
     float nmi;
     
     FILE *stream;
-    sprintf(out,"output.txt");
+    sprintf(out,"output_k5.txt");
     stream = fopen(out, "w");
     fprintf(stream,"%% #file #transient #communities #max-com-size #infomap #centroid_error\n");
 
@@ -183,7 +183,7 @@ void ModelDynamic(int exec){
 
 
         itc = 0;
-//        itc = Model->CommunityDetection3();
+        itc = Model->CommunityDetection3();
 //        Model->CommunityDetectionDB(0.2);
         cout << "T: " << count << " ";
         cout << "Steps: " << it << " ";
@@ -193,7 +193,7 @@ void ModelDynamic(int exec){
 //        cout << "SizeC: " << Model->sizeLargeCom() << " ";
 //        cout << "DiffX: " << Model->getDiffX() << " ";
 //        cout << "Var: " << Model->getVar() << " ";
-        cout << "FR: " << Model->getNormFR() << endl;
+        cout << "FR: " << Model->getNormFR(0) << endl;
 
 //        cInfo = Model->Infomap(maxInfo);
         cInfo = maxInfo = 0;
@@ -203,10 +203,10 @@ void ModelDynamic(int exec){
         if (!fNameCom.empty()) nmi = Model->NMI();
         else nmi = 0.0;
 
-        sprintf(ext,"t%d.par",count);
-        saveName = fName;
-        saveName.replace(fName.size()-3,3,ext);
-        Model->SaveParticlePosition(saveName.c_str());
+//        sprintf(ext,"t%d.par",count);
+//        saveName = fName;
+//        saveName.replace(fName.size()-3,3,ext);
+//        Model->SaveParticlePosition(saveName.c_str());
 
 //        saveName = fName;
 //        saveName.replace(fName.size()-3,3,"for");
@@ -216,22 +216,30 @@ void ModelDynamic(int exec){
 //        saveName.replace(fName.size()-3,3,"mes");
 //        SaveMeasures(saveName.c_str());        
 
-        fprintf(stream,"%d %d %d %d %d %.2f %d %d %.5f %.5f %.5f %.5f %.5f %.5f %.5f\n",
+        fprintf(stream,"%d %d %.5f %.5f %.5f %.5f %.5f %.5f %.5f %.5f %.5f %.5f %.5f %.5f %.5f %.5f %.5f %.5f %.5f %d %d\n",
                 count++, //1
                 it, //2
-                99999, //itc, //3
-                0, //Model->getNumCommunities(), //4
-                0, //Model->sizeLargeCom(),  //5
-                0.0, //nmi, // 6
-                0, //cInfo,  //7
-                0, //maxInfo, //8
-                0.0, //Model->printCentroidsError(), //9
-                0.0, //GetBetweenness(), //10
-                Model->getNetDegree(), //11
-                Model->getNormFR(), //12
-                Model->getVar(), //13 (MSD distances from the centre of mass)
-                Model->getDiffX(), // 14 (RMSD of positions)
-                Model->getDiffR()); // 15 (RMSD of repulsion interactions)
+                Model->getNetDegree(), //3
+                Model->getNormFR(0), //4
+                Model->getNormFR(1), //5
+                Model->getNormFR(2), //6
+                Model->getNormFR(3), //7
+                Model->getVar(0), //8 (MSD distances from the centre of mass)
+                Model->getVar(1), //9 (MSD distances from the centre of mass)
+                Model->getVar(2), //10 (MSD distances from the centre of mass)
+                Model->getVar(3), //11 (MSD distances from the centre of mass)
+                Model->getDiffX(0), // 12 (RMSD of positions)
+                Model->getDiffX(1), // 13 (RMSD of positions)
+                Model->getDiffX(2), // 14 (RMSD of positions)
+                Model->getDiffX(3), // 15 (RMSD of positions)
+                Model->getDiffR(0), // 16 (RMSD of repulsion interactions)
+                Model->getDiffR(1), // 17 (RMSD of repulsion interactions)
+                Model->getDiffR(2), // 18 (RMSD of repulsion interactions)
+                Model->getDiffR(3), // 19 (RMSD of repulsion interactions)
+                Model->getNumCommunities(), // 20
+                Model->sizeLargeCom()); // 21
+
+        
         
     }
     fclose(stream);
@@ -401,7 +409,7 @@ void Model0(){
     Model->SaveCentroids(saveName.c_str());
     
     cout << "# of communities detected: " << Model->getNumCommunities() << endl;
-    cout << "FR norm: " << Model->getNormFR() << endl;
+    cout << "FR norm: " << Model->getNormFR(0) << endl;
 
     if (!fNameCom.empty()) cout << "NMI: " << Model->NMI() << endl;
     cout << "Elapsed time (s): " << ((float)(end-ini))/CLOCKS_PER_SEC << endl;
@@ -426,9 +434,9 @@ void Model0(){
                 Model->sizeLargeCom(),  //2
                 Model->NMI(), //3
                 Model->printCentroidsError(), //4
-                Model->getNormFR(), //5
-                Model->getVar(), //6
-                Model->getDiffX()); //7
+                Model->getNormFR(0), //5
+                Model->getVar(0), //6
+                Model->getDiffX(0)); //7
 
 }
 
@@ -467,9 +475,9 @@ void ExpDim(float zout, int ite){
                 Model->sizeLargeCom(),  //3
                 Model->NMI(), //4
                 Model->printCentroidsError(), //5
-                Model->getNormFR(), //6
-                Model->getVar(), //7
-                Model->getDiffX() //8
+                Model->getNormFR(0), //6
+                Model->getVar(0), //7
+                Model->getDiffX(0) //8
     );
     fclose(st);
 }
@@ -510,6 +518,63 @@ void ExpDim(float zout, int ite){
 //    }
 //}
 
+void SimChange(){
+    string saveName;
+    char out[256];
+    int i,count=0, it;
+    FILE *stream;
+    
+    Model = new TParticleNet(dim);
+    Model->LoadFromFile(fName.c_str());
+    Model->SetModelParameters(alpha, beta, 1.0);
+
+//    printf("Debug: %s\n",fName.c_str() );
+//    return;
+    
+    stream = fopen("output.txt", "w");
+    
+    cout << "Model running...\n";
+    
+    for (i=1 ; i<100 ; i++){
+        cout << i << endl;
+        it = Model->RunModel(maxSteps, minDR, verbose);
+        sprintf(out,"time_%d.par",i);
+        saveName = fName;
+        saveName.replace(fName.size()-3,3,out);
+        Model->SaveParticlePosition(saveName.c_str());
+        fprintf(stream,"%d %d %.5f %.5f %.5f %.5f %.5f %.5f %.5f %.5f %.5f %.5f %.5f %.5f %.5f %.5f %.5f %.5f %.5f\n",
+                count++, //1
+                it, //2
+                Model->getNetDegree(), //3
+                Model->getNormFR(0), //4
+                Model->getNormFR(1), //5
+                Model->getNormFR(2), //6
+                Model->getNormFR(3), //7
+                Model->getVar(0), //8 (MSD distances from the centre of mass)
+                Model->getVar(1), //9 (MSD distances from the centre of mass)
+                Model->getVar(2), //10 (MSD distances from the centre of mass)
+                Model->getVar(3), //11 (MSD distances from the centre o f mass)
+                Model->getDiffX(0), // 12 (RMSD of positions)
+                Model->getDiffX(1), // 13 (RMSD of positions)
+                Model->getDiffX(2), // 14 (RMSD of positions)
+                Model->getDiffX(3), // 15 (RMSD of positions)
+                Model->getDiffR(0), // 16 (RMSD of repulsion interactions)
+                Model->getDiffR(1), // 17 (RMSD of repulsion interactions)
+                Model->getDiffR(2), // 18 (RMSD of repulsion interactions)
+                Model->getDiffR(3)); // 19 (RMSD of repulsion interactions)
+        Model->ChangeNetwork(0,0.01);
+    }
+    fclose(stream);
+
+
+    sprintf(out,"time_%d.par",i);
+    saveName = fName;
+    saveName.replace(fName.size()-3,3,out);
+    Model->SaveParticlePosition(saveName.c_str());
+    cout << "Final state: " << saveName << endl;
+   
+}
+
 
 int main(int argc,char *argv[]){
     int i=0;
@@ -544,6 +609,13 @@ int main(int argc,char *argv[]){
             fclose(stream);
             fileOfNames = argv[2];
             gen = true;
+        }
+        else if (strcmp(argv[1],"-change")==0){
+            stream = fopen(argv[2], "r");
+            if (!stream){ Message(1); return 0;}
+            fclose(stream);
+            fName = argv[2];
+            simC= true;
         }
         else {
             stream = fopen(argv[1], "r");
@@ -641,8 +713,8 @@ int main(int argc,char *argv[]){
 //        }
 //        return 0;
         
-        if (byStep) ModelByStep();
-//        else if (searchBeta) ModelSearchBeta();
+        if (simC) SimChange();
+        else if (byStep) ModelByStep();
         else if (dynamic) ModelDynamic(0);
         else if (gen) GenerateNetworks(fileOfNames.c_str(), opt_gen, k_eps, mst);
         else {
