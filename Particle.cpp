@@ -40,6 +40,7 @@ int maxSteps=10000;
 bool dynamic=false, gen=false, simC=false;
 int dim=3;
 float epsilon;
+float threshold=0.5;
 bool fixedcom=false;
 PParticleNet Model;
 
@@ -113,6 +114,7 @@ void Message(int i){
         cout << "\t\t-tr value ->  define the stop condition - theta_R  [default: 1.0]\n";
         cout << "\t\t-max value ->  define the maximum number of steps (iterations)  [default: 1000]\n";
         cout << "\t\t-dim value ->  define the dimension of the particle system [default: 3]\n";
+        cout << "\t\t-ltr value ->  Link threshold [default: 0.5]\n";
         //        cout << "\t\t-ss number_of_steps -> save states (files.par & files.cen)\n";
         //        cout << "\t\t-sf -> load the input file using the snapFormat\n";
         cout << "\t\t-v -> verbose\n";
@@ -143,10 +145,11 @@ void ModelDynamic(int exec){
     steps = maxSteps;
     ifstream file (fileOfNames.c_str());
     count = 0;
+    
     while  (file >> fName){
         if (firstIt){
             Model = new TParticleNet(dim);
-            Model->LoadFromFile(fName.c_str());
+            Model->LoadFromFileMat(fName.c_str());
             Model->SetModelParameters(alpha, beta, 1.0);
             sprintf(out,"time_0.par");
             saveName = fName;
@@ -156,14 +159,14 @@ void ModelDynamic(int exec){
             firstIt = false;
         }
         else {
-            Model->ReloadNetwork(fName.c_str());
+            Model->ReloadNetworkMat(fName.c_str());
         }
         cout << "Running model on: " << fName << endl;
 
         if (!fNameCom.empty()) Model->LoadComFile(fNameCom.c_str());
-        
+
         Model->SetTag(count);
-        it = Model->RunModel(steps,minDR,verbose);
+        it = Model->RunModelMat(steps,minDR,threshold, verbose);
 
 //        for (i=0 ; i<100 ; i++){
 //            Model->RunByStep();
@@ -383,11 +386,12 @@ void Model0(){
     ini = clock();
     
     Model = new TParticleNet(dim);
+//    Model->LoadFromFileMat(fName.c_str());
     Model->LoadFromFile(fName.c_str());
     
 //    Model = TParticleNet::LoadFromFile(fName.c_str(),dim);
     if (!fNameCom.empty()) Model->LoadComFile(fNameCom.c_str());
-  
+    
     sprintf(out,"time_0.par");
     saveName = fName;
     saveName.replace(fName.size()-3,3,out);
@@ -397,7 +401,8 @@ void Model0(){
     Model->SetModelParameters(alpha, beta, 1.0);
     cout << "Model running...\n";
 
-    Model->RunModel(maxSteps, minDR, verbose);
+    Model->RunModel2(maxSteps, minDR, verbose);
+//    Model->RunModelMat(maxSteps, minDR, threshold, verbose);
 
     cout << "Detecting clusters...\n";
     Model->CommunityDetection3();
@@ -585,6 +590,14 @@ int main(int argc,char *argv[]){
     int opt_gen;
     float zout;
     
+    
+//    for (float r=-1.0 ; r<1.0 ; r+=0.01){
+//        zout = r *M_PI/2.0;
+//        printf("Tan(%.2f) = %.2f\n",r,1.0/tan(zout));
+//    }
+//    
+//    return 0;
+    
     printf("Running: \n$ ");
     for (i=0 ; i<argc ; i++) {
         printf("%s ",argv[i]);
@@ -640,6 +653,10 @@ int main(int argc,char *argv[]){
             else if (strcmp(argv[i],"-tr") == 0){
                 if (++i>=argc) break;
                 minDR = (float)strtod(argv[i],NULL);
+            }
+            else if (strcmp(argv[i],"-ltr") == 0){
+                if (++i>=argc) break;
+                threshold = (float)strtod(argv[i],NULL);
             }
             else if (strcmp(argv[i],"-a") == 0){
                 if (++i>=argc) break;

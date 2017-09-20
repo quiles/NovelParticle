@@ -62,6 +62,8 @@ public:
     float x[MAXDIM];
     float xO[MAXDIM];
     float xOL[MAXDIM];
+    float vel[MAXDIM];
+    
     float dA[MAXDIM];
     float dR[MAXDIM];
     float dAO[MAXDIM];
@@ -72,12 +74,15 @@ public:
 //    float AxA, AyA, AzA;
 //    float AxT, AyT, AzT;
     float DistF, DistI;
-    float ComCentrality; 
+    float ComCentrality;
+    float meanDistance;
+    float R;
 // DBSCAN
     bool visited;
     int neighbours;
     int cluster_db;
     int degree;
+    
 
     
     //	float erro;
@@ -201,14 +206,23 @@ public:
     void ReloadNetwork(const char *filename);
     void LoadComFile(const char *filename);
 
-    void RunByStep();
-    void RunByStep2();
-    void RunByStepRadial();
-    void RunByStepRadial2();
+    void LoadFromFile2(const char *filename);
+
+    void LoadFromFileMat(const char *filename);
+    void ReloadNetworkMat(const char *filename);
+
+    
+//    void RunByStep();
+//    void RunByStep2();
+//    void RunByStepRadial();
+//    void RunByStepRadial2();
+
     int RunModel(int maxIT, float minDR, bool verbose);
     int RunModel2(int maxIT, float minDR, bool verbose);
+    int RunModelMat(int maxIT, float minDR, float threshold, bool verbose);
 
-    int RunModelNumerical(int maxIT, float minDR, bool verbose);
+    
+//    int RunModelNumerical(int maxIT, float minDR, bool verbose);
 
     void SaveParticlePosition(const char *filename);
     void SaveParticleForces(const char *filename);

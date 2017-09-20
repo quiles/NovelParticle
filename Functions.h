@@ -247,6 +247,7 @@ void GenerateNetworks(const char *source, int opt, float ke, bool mst){
     }
 }
 
-
-
+void GenerateFileEvolution(const char *filename){
+    
+}
 
